@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0.0", "setuptools-scm>=8.0"]
+requires = ["setuptools>=61.0.0", "setuptools-scm>=8.0", "wheel<0.46"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -17,7 +17,7 @@ name = "nomad-uibk-plugin"
 description = "UIBK schema and parser collection for NOMAD plattform."
 dynamic = ["version"]
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     { name = "Fabian Schöppach", email = "fabian.schoeppach@physik.hu-berlin.de" },
 ]
