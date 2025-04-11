@@ -16,22 +16,10 @@
 # limitations under the License.
 #
 
-from typing import (
-    TYPE_CHECKING,
-)
-
-if TYPE_CHECKING:
-    from nomad.datamodel.datamodel import (
-        EntryArchive,
-    )
-    from structlog.stdlib import (
-        BoundLogger,
-    )
-
+from collections.abc import Callable
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
 )
 
 import numpy as np
@@ -62,6 +50,7 @@ from nomad_measurements.utils import merge_sections
 from nomad_uibk_plugin.schema_packages import UIBKCategory, XRFreader
 
 if TYPE_CHECKING:
+    from nomad.datamodel.data import EntryArchive
     from structlog.stdlib import BoundLogger
 
 configuration = config.get_plugin_entry_point(
