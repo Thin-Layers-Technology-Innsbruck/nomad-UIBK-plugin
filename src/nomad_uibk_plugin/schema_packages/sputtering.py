@@ -56,192 +56,6 @@ m_package = SchemaPackage()
 ureg = UnitRegistry()
 
 
-# class Target(PVDSource, EntryData):
-#     """
-#     Targets have:
-#     Static
-#     - Internal ID
-#         - number s
-#         - name s
-#     - Manufacturer s
-#     - Reseller s
-#     - Manufacturing date (day/month optional) s
-#     - Date of arrival (day/month optional) s
-#     - Composition (Multiple elements, doted, with purity, at% or wt%)(Supplyer values)
-#     - Thickness
-#         - Total s
-#         - Material s
-#         - Backing plate s
-#     - Diameter
-#         - Material s
-#         - Backing plate s
-#     - Backing plate (bool) s
-#     - shape (planar, special) s
-#     - prior use s
-
-#     Changing
-#     - Impurity (other target in the same process)
-#     - Usage (Joule of all processes)
-
-#     Measurements
-#     - Photos
-#     - IFM
-#     - EDX
-
-#     Associations
-#     - List of all VP a target was used in
-#     - A chronological list of all processes
-#     """
-
-#     m_def = Section()
-
-#     internal_id = Quantity(
-#         type=int,
-#         description='The lab ID of the target.',
-#         a_eln=ELNAnnotation(component=ELNComponentEnum.NumberEditQuantity),
-#     )
-#     internal_name = Quantity(
-#         type=str,
-#         description=(
-#             'Common name of the target. ' 'Usually the (simplified) elements and ID'
-#         ),
-#         a_eln=ELNAnnotation(
-#             component=ELNComponentEnum.StringEditQuantity,
-#         ),
-#     )
-#     manufacturer_name = Quantity(
-#         type=str,
-#         description='Name of manufacturing company.',
-#         a_eln=ELNAnnotation(
-#             component=ELNComponentEnum.StringEditQuantity,
-#         ),
-#     )
-#     reseller_name = Quantity(
-#         type=str,
-#         description='Name of reseller.',
-#         a_eln=ELNAnnotation(
-#             component=ELNComponentEnum.StringEditQuantity,
-#         ),
-#     )
-#     manufacturing_date = Quantity(
-#         type=Datetime,
-#         description='Date of manufacturing',
-#         a_eln=ELNAnnotation(component=ELNComponentEnum.DateTimeEditQuantity),
-#     )
-#     acceptance_date = Quantity(
-#         type=Datetime,
-#         description='Date when target was first added to the database',
-#         a_eln=ELNAnnotation(component=ELNComponentEnum.DateEditQuantity),
-#     )
-#     'TODO: Use proper types and crate a new category for the GUI.'
-#     composition = Quantity(
-#         type=ElementalComposition,
-#         description='Composition of the target as stated by the manufacturer',
-#         # a_eln=ELNAnnotation(component=ELNComponentEnum.element),
-#         repeatable=True,
-#     )
-#     thickness_total = Quantity(
-#         type=float,
-#         description='Thickness of the target includnig material and backing plate.',
-#         a_eln=ELNAnnotation(
-#             component=ELNComponentEnum.NumberEditQuantity,
-#             defaultDisplayUnit='mm',
-#             label='Total thickness',
-#         ),
-#         unit='m',
-#     )
-#     thickness_material = Quantity(
-#         type=float,
-#         description='Thickness of the target material thickness.',
-#         a_eln=ELNAnnotation(
-#             component=ELNComponentEnum.NumberEditQuantity,
-#             defaultDisplayUnit='mm',
-#             label='Material thickness',
-#         ),
-#         unit='m',
-#     )
-#     thickness_backing_plate = Quantity(
-#         type=float,
-#         description='Thickness of the target includnig material and backing plate.',
-#         a_eln=ELNAnnotation(
-#             component=ELNComponentEnum.NumberEditQuantity,
-#             defaultDisplayUnit='mm',
-#             label='Backing plate thickness',
-#         ),
-#         unit='m',
-#     )
-#     diameter_material = Quantity(
-#         type=float,
-#         description='Diameter of the target material.',
-#         a_eln=ELNAnnotation(
-#             component=ELNComponentEnum.NumberEditQuantity,
-#             defaultDisplayUnit='mm',
-#             label='Material thickness',
-#         ),
-#         unit='m',
-#     )
-#     diameter_backing_plate = Quantity(
-#         type=float,
-#         description='Diameter of the backing plate.',
-#         a_eln=ELNAnnotation(
-#             component=ELNComponentEnum.NumberEditQuantity,
-#             defaultDisplayUnit='mm',
-#             label='Backing plate diameter',
-#         ),
-#         unit='mm',
-#     )
-#     backing_plate = Quantity(
-#         type=bool,
-#         description='Is the target mounted on a backing plate.',
-#         a_eln=ELNAnnotation(
-#             component=ELNComponentEnum.BoolEditQuantity,
-#         ),
-#     )
-#     # TODO: How detailed do we want to be here?
-#     shape = Quantity(
-#         type=MEnum(['circular', 'rectangular', 'special']),
-#         description='Shape of the target.',
-#         default='circular',
-#         a_eln={'component': 'RadioEnumEditQuantity'},
-#     )
-#     prior_use = Quantity(
-#         type=bool,
-#         description='The target was in use before being added to NOMAD.',
-#         a_eln=ELNAnnotation(
-#             component=ELNComponentEnum.BoolEditQuantity,
-#         ),
-#     )
-#     m_def = Section()
-#     """
-#     # TODO:
-#     Impurities
-#     - Date + Target + Joules (linked via process ID?)
-#     """
-
-#     usage = Quantity(
-#         type=float,
-#         description='Total of the energy used of the target',
-#         a_eln=ELNAnnotation(
-#             component=ELNComponentEnum.NumberEditQuantity,
-#         ),
-#         unit='joule',
-#     )
-#     """
-#     Measurements
-#     - Photos
-#     - IFM
-#     - EDX
-
-#     Associations
-#     - List of all VPs a target was used in
-#     - A chronological list of all processes
-#     """
-
-
-# class TargetReference(SectionReference):
-#     reference = Quantity(type=Target, a_eln=dict(component='ReferenceEditQuantity'))
-
-
 class Substrate(EntryData):
     """
     - type
@@ -415,7 +229,6 @@ class PSU(EntryData):
             component=ELNComponentEnum.BoolEditQuantity,
         ),
     )
-
     operating_hours = Quantity(
         type=int,
         description='NOMAD ID of the PSU',
@@ -584,7 +397,16 @@ class SputterParameters(ArchiveSection):
     test = Quantity(type=str)
 
 
-#### Work started here
+#     """
+#     Measurements
+#     - Photos
+#     - IFM
+#     - EDX
+
+#     Associations
+#     - List of all VPs a target was used in
+#     - A chronological list of all processes
+#     """
 
 
 class TargetComponent(PureSubstanceComponent):

@@ -98,6 +98,7 @@ class XRFElementalComposition(ElementalComposition):
         a_eln=ELNAnnotation(component=ELNComponentEnum.NumberEditQuantity),
         description='Intensity of the background sourrounding the element peak',
     )
+    
 
     intensity_background_2 = Quantity(
         type=np.dtype(np.float64),
