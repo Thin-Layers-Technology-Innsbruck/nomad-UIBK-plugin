@@ -55,7 +55,7 @@ class EfficienciesSchemaEntryPoint(SchemaPackageEntryPoint):
         from nomad_uibk_plugin.schema_packages.EfficienciesSchema import m_package
 
         return m_package
-    
+
 
 effschema = EfficienciesSchemaEntryPoint(
     name='EfficienciesSchema',
