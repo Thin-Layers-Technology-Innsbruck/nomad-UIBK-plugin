@@ -6,9 +6,10 @@ from nomad.datamodel.data import (
     EntryData,
 )
 from nomad.datamodel.metainfo.annotations import ELNAnnotation, ELNComponentEnum
+
 # from nomad.datamodel.metainfo.basesections import (
-    # CompositeSystem,
-    # CompositeSystemReference,
+# CompositeSystem,
+# CompositeSystemReference,
 # )
 # from nomad.datamodel.metainfo.plot import PlotlyFigure, PlotSection
 from nomad.metainfo import Quantity, SchemaPackage, Section
@@ -43,37 +44,6 @@ class EfficienciesSchema(EntryData):
 
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
         super().normalize(archive, logger)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 m_package.__init_metainfo__()
