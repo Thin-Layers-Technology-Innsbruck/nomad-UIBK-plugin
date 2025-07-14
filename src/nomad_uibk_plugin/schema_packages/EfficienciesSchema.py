@@ -1,17 +1,17 @@
 from typing import TYPE_CHECKING
 
-import plotly.graph_objects as go
+# import plotly.graph_objects as go
 from nomad.datamodel.data import (
-    ArchiveSection,
+    # ArchiveSection,
     EntryData,
 )
 from nomad.datamodel.metainfo.annotations import ELNAnnotation, ELNComponentEnum
-from nomad.datamodel.metainfo.basesections import (
-    CompositeSystem,
-    CompositeSystemReference,
-)
-from nomad.datamodel.metainfo.plot import PlotlyFigure, PlotSection
-from nomad.metainfo import Quantity, SchemaPackage, Section, SubSection
+# from nomad.datamodel.metainfo.basesections import (
+    # CompositeSystem,
+    # CompositeSystemReference,
+# )
+# from nomad.datamodel.metainfo.plot import PlotlyFigure, PlotSection
+from nomad.metainfo import Quantity, SchemaPackage, Section
 
 from nomad_uibk_plugin.schema_packages import UIBKCategory
 
