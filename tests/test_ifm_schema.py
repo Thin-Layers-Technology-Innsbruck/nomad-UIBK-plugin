@@ -32,7 +32,8 @@ def test_IFMModel():
     normalize_all(entry_archive)
 
     assert entry_archive.data.file == 'Model_20241229_binary.keras'
-    ### normalization for .keras files only seem to work locally; commented away for github tests workflow
+    ### normalization for .keras files only seem to work locally;
+    ### commented away for github tests workflow
     # assert entry_archive.data.number_of_layers == 16  # noqa: PLR2004
     # assert entry_archive.data.number_of_parameters == 4584834  # noqa: PLR2004
 
