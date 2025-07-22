@@ -39,6 +39,8 @@ from nomad_measurements.utils import (
     # get_reference,
     merge_sections,
 )
+from nomad.orchestrator import utils as orchestrator_utils
+from nomad.orchestrator.shared.constant import TaskQueue
 from pint import UnitRegistry
 
 from nomad_uibk_plugin.schema_packages import UIBKCategory
@@ -270,6 +272,57 @@ class ModelReference(EntityReference):
             self.name = self.reference.name
 
 
+class InferenceStatus(ArchiveSection):
+    """Section to fetch the status of an inference workflow."""
+
+    workflow_id = Quantity(
+        type=str,
+        description='ID of the `temporalio` workflow.',
+    )
+    status = Quantity(
+        type=str,
+        description='Status of the inference workflow.',
+    )
+    generated_entry = Quantity(
+        type=CrystaLLMInferenceResult,
+        description='Reference to the generated entry after the workflow completes.',
+    )
+    trigger_get_status = Quantity(
+        type=bool,
+        default=False,
+        description='Retrieve the current status of the inference workflow.',
+        a_eln=ELNAnnotation(
+            component=ELNComponentEnum.ActionEditQuantity,
+            label='Get Workflow Status',
+        ),
+    )
+
+    def normalize(self, archive, logger=None):
+        """Normalize the section to ensure it is ready for processing."""
+        super().normalize(archive, logger)
+        if not self.status or self.status == 'RUNNING' or self.trigger_get_status:
+            try:
+                status = orchestrator_utils.get_workflow_status(self.workflow_id)
+                if status:
+                    self.status = status.name
+            except Exception as e:
+                logger.error(f'Error getting workflow status: {e}. ')
+            finally:
+                self.trigger_get_status = False
+            if self.status == 'COMPLETED':
+                reference = get_reference_from_mainfile(
+                    archive.metadata.upload_id,
+                    os.path.join(self.workflow_id, 'inference_result.archive.json'),
+                )
+                if not reference:
+                    logger.error(
+                        'Unable to set reference for the generated entry for '
+                        f'workflow {self.workflow_id}.'
+                    )
+                else:
+                    self.generated_entry = reference
+
+
 class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
     """
     Automated image analysis entry.
@@ -309,6 +362,31 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
         default=False,
         a_eln=ELNAnnotation(component=ELNComponentEnum.BoolEditQuantity),
     )
+
+    triggered_inferences = SubSection(
+        section_def=InferenceStatus,
+        description='A section for storing the status of the triggered inference '
+        'workflow.',
+        repeats=True,
+    )
+
+    def run_workflow(self, archive, logger=None):
+        """
+        Run the LLM workflow with the provided archive.
+        """
+        input_data = None           #change to actual input data here later on
+        workflow_name = 'nomad_UIBK_plugin.workflows.InferenceWorkflow'
+        workflow_id = orchestrator_utils.start_workflow(
+            workflow_name=workflow_name,
+            data=input_data,
+            task_queue=TaskQueue.GPU
+        )
+        if not self.triggered_inferences:
+            self.triggered_inferences = [InferenceStatus()]
+        else:
+            self.triggered_inferences.append(InferenceStatus())
+        self.triggered_inferences[-1].workflow_id = workflow_id
+
 
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
         super().normalize(archive, logger)
