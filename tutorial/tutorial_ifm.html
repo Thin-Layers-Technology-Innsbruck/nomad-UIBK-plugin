@@ -1,0 +1,676 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="UIBK schema and parser collection for NOMAD plattform.">
+      
+      
+        <meta name="author" content="Fabian Schöppach">
+      
+      
+      <link rel="icon" href="../assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-8.1.1">
+    
+    
+      
+        <title>IFM Tutorial - nomad-uibk-plugin</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.23b6d78a.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.e6a45f82.min.css">
+        
+          
+          
+          <meta name="theme-color" content="">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Titillium+Web:300,400,400i,700%7C&display=fallback">
+        <style>:root{--md-text-font:"Titillium Web";--md-code-font:""}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="#2a4cdf" data-md-color-accent="#008a67">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#using-automated-defect-analysis-on-ifm-images" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="https://nomad-lab.eu" title="nomad-uibk-plugin" class="md-header__button md-logo" aria-label="nomad-uibk-plugin" data-md-component="logo">
+      
+  <img src="../assets/nomad-plugin-logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            nomad-uibk-plugin
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              IFM Tutorial
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/fabianschoeppach/nomad-uibk-plugin" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="https://nomad-lab.eu" title="nomad-uibk-plugin" class="md-nav__button md-logo" aria-label="nomad-uibk-plugin" data-md-component="logo">
+      
+  <img src="../assets/nomad-plugin-logo.png" alt="logo">
+
+    </a>
+    nomad-uibk-plugin
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/fabianschoeppach/nomad-uibk-plugin" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../index.html" class="md-nav__link">
+        Home
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          Tutorial
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Tutorial" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Tutorial
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          IFM Tutorial
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="tutorial_ifm.html" class="md-nav__link md-nav__link--active">
+        IFM Tutorial
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#uploads" class="md-nav__link">
+    Uploads
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ifm-measurement-entry" class="md-nav__link">
+    IFM Measurement Entry
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ifm-model" class="md-nav__link">
+    IFM Model
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ifm-analysis" class="md-nav__link">
+    IFM Analysis
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3">
+          How-to guides
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="How-to guides" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          How-to guides
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how_to/install_this_plugin.html" class="md-nav__link">
+        Install this Plugin
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how_to/use_this_plugin.html" class="md-nav__link">
+        Use this Plugin
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how_to/contribute_to_this_plugin.html" class="md-nav__link">
+        Contribute to this plugin
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../explanation/explanation.html" class="md-nav__link">
+        Explanation
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/references.html" class="md-nav__link">
+        Reference
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#uploads" class="md-nav__link">
+    Uploads
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ifm-measurement-entry" class="md-nav__link">
+    IFM Measurement Entry
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ifm-model" class="md-nav__link">
+    IFM Model
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ifm-analysis" class="md-nav__link">
+    IFM Analysis
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+<a href="https://github.com/fabianschoeppach/nomad-uibk-plugin/edit/master/docs/tutorial/tutorial_ifm.md" title="Edit this page" class="md-content__button md-icon">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+</a>
+
+
+<h1 id="using-automated-defect-analysis-on-ifm-images">Using Automated Defect Analysis on IFM Images<a class="headerlink" href="#using-automated-defect-analysis-on-ifm-images" title="Permanent link">&para;</a></h1>
+<p>This tutorial is to demonstrate how to perform an automated defect analysis on IFM images.<br />
+To execute the analysis, there need to be three NOMAD entries present: </p>
+<ul>
+<li>an IFM Measurement type entry with associated microscopy file</li>
+<li>two IFM Model type entries, each with the respective <code>.keras</code> model file</li>
+</ul>
+<p>Depending on your knowledge and on which entries you have already present, you may jump ahead to the <a href="#ifm-analysis">IFM Analysis</a> subsection. </p>
+<h2 id="uploads">Uploads<a class="headerlink" href="#uploads" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>NOMAD Uploads page</strong>:<br />
+    Navigate to your Uploads page, reachable under <code>PUBLISH &gt; Uploads</code>.</li>
+<li><strong>Enter upload</strong>:<br />
+    You might need to create a new new upload using  or edit an existing one.<br />
+<img alt="Create or Edit Upload" src="../assets/tutorial_ifm/create_edit_upload.png" /></li>
+</ol>
+<h2 id="ifm-measurement-entry">IFM Measurement Entry<a class="headerlink" href="#ifm-measurement-entry" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Create a new entry</strong>:<br />
+    Create a new entry via the button <code>Create from Schema</code>.<br />
+<img alt="Create a new entry" src="../assets/tutorial_ifm/create_new_entry.png" />
+    Give it a name and select <code>IFM Measurement</code> as type.<br />
+<img alt="Create a new IFM measurement entry" src="../assets/tutorial_ifm/create_new_entry_measurement.png" /></li>
+<li><strong>Assign the measurement files</strong>:<br />
+    You should now see the data section of the created entry. Assign an image and a metadata file.<br />
+<img alt="Assign measurement files" src="../assets/tutorial_ifm/measurement_assign_files.png" />
+    Don't forget to click the save button in the top right corner afterwards!<br />
+<img alt="Assign measurement files" src="../assets/tutorial_ifm/measurement_assign_files_save.png" /></li>
+<li>
+<p><strong>Automated XML Parsing</strong>:
+    As soon as a XML file is assigned, the plugin extracts metadata from it, such as:</p>
+<ul>
+<li>exposure time</li>
+<li>start and end time</li>
+<li>magnification</li>
+</ul>
+<p><img alt="Processed entry" src="../assets/tutorial_ifm/measurement_assign_files_processed.png" />
+If you have a <code>UIBKSample</code> entry already present with the same <code>lab_id</code> as extracted from the XML file, the entry automatically creates a reference to it.<br />
+<img alt="Reference to sample" src="../assets/tutorial_ifm/measurement_assign_files_reference.png" /></p>
+</li>
+</ol>
+<h2 id="ifm-model">IFM Model<a class="headerlink" href="#ifm-model" title="Permanent link">&para;</a></h2>
+<p>Perform the same steps as above for creating two <code>IFM Model</code> entries:</p>
+<ol>
+<li><strong>Create a new entry</strong>:<br />
+    Create a new entry via the button <code>Create from Schema</code>.<br />
+<img alt="Create a new entry" src="../assets/tutorial_ifm/create_new_entry.png" />
+    Give it a name and select <code>IFM Model</code> as type.<br />
+<img alt="Create a new IFM model entry" src="../assets/tutorial_ifm/create_new_entry_model.png" /></li>
+<li><strong>Assign the measurement files</strong>:<br />
+    You should now see the data section of the created entry. Assign an image and a metadata file.<br />
+<img alt="Assign measurement files" src="../assets/tutorial_ifm/model_assign_files.png" />
+    Don't forget to click the save button in the top right corner afterwards!<br />
+<img alt="Assign measurement files" src="../assets/tutorial_ifm/model_assign_files_save.png" /></li>
+<li>
+<p><strong>Automated Parsing</strong>:
+    As soon as the <code>.keras</code> file is assigned, the plugin extracts metadata from it, such as:</p>
+<ul>
+<li>model type (binary/classification)</li>
+<li>number of layers</li>
+<li>number of parameters</li>
+</ul>
+<p><img alt="Processed entry" src="../assets/tutorial_ifm/model_assign_files_processed.png" /></p>
+</li>
+</ol>
+<h2 id="ifm-analysis">IFM Analysis<a class="headerlink" href="#ifm-analysis" title="Permanent link">&para;</a></h2>
+<p>At this point, your NOMAD upload should contain at least one <code>IFMMeasurement</code> entry and two <code>IFMModel</code> entries:</p>
+<p><img alt="Starting Point Analysis" src="../assets/tutorial_ifm/analysis_start.png" /></p>
+<p>To perform the analysis on this measurement perform the following steps: </p>
+<ol>
+<li><strong>Create a new IFMAnalysis entry</strong>:<br />
+<img alt="Create a new IFM analysis entry" src="../assets/tutorial_ifm/create_new_entry_analysis.png" /></li>
+<li><strong>Assign the measurement entry</strong>:<br />
+    Create a new <code>input</code> section by clicking the plus icon:<br />
+<img alt="Create a new input" src="../assets/tutorial_ifm/analysis_reference_add.png" /><br />
+    Click on the pen icon to assign an existing entry:<br />
+<img alt="Assign an existing entry" src="../assets/tutorial_ifm/analysis_reference_assign.png" /><br />
+    Select the IFMMeasurement entry you want to analyze:<br />
+<img alt="Select the measurement entry" src="../assets/tutorial_ifm/analysis_reference_select.png" /><br />
+    Save this change:<br />
+<img alt="Save changes" src="../assets/tutorial_ifm/analysis_reference_save.png" /><br />
+<img alt="Done" src="../assets/tutorial_ifm/analysis_reference_assigned.png" />  </li>
+<li><strong>Assign the models</strong>:
+    Repeat the steps from above to assign both <code>IFMModel</code> entries as well:<br />
+<img alt="Ready" src="../assets/tutorial_ifm/analysis_ready.png" />  </li>
+<li><strong>Check 'perform analysis'</strong>:<br />
+    By opting the 'perform analysis' checkbox (and saving) the image analysis is triggered:<br />
+<img alt="Perform analysis" src="../assets/tutorial_ifm/analysis_perform.png" />  </li>
+<li><strong>Results</strong>:
+    Execution of the code can take up to several minutes.
+    Results are stored in a csv file that is referenced in the <code>output</code> section of the <code>IFMAnalsis</code> entry:<br />
+<img alt="Results" src="../assets/tutorial_ifm/analysis_results_figure.png" />
+    From these results, a heatmap of the spatial distribution of detected defects is generated, and the prevalence of classified defects is calculated.<br />
+<img alt="Results" src="../assets/tutorial_ifm/analysis_results_prevalence.png" />  </li>
+</ol>
+
+              
+            </article>
+          </div>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    <nav class="md-footer__inner md-grid" aria-label="Footer">
+      
+        
+        <a href="../index.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: Home" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Home
+            </div>
+          </div>
+        </a>
+      
+      
+        
+        <a href="../how_to/install_this_plugin.html" class="md-footer__link md-footer__link--next" aria-label="Next: Install this Plugin" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              Install this Plugin
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant"], "search": "../assets/javascripts/workers/search.c7dec7e7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.da79ceb7.min.js"></script>
+      
+        <script src="../javascript.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
