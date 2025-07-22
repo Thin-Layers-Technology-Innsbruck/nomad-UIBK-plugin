@@ -48,3 +48,16 @@ ifmschema = IFMSchemaPackageEntryPoint(
     name='IFMSchema',
     description='IFM Schema package.',
 )
+
+
+class EfficienciesSchemaEntryPoint(SchemaPackageEntryPoint):
+    def load(self):
+        from nomad_uibk_plugin.schema_packages.EfficienciesSchema import m_package
+
+        return m_package
+
+
+effschema = EfficienciesSchemaEntryPoint(
+    name='EfficienciesSchema',
+    description='test',
+)
