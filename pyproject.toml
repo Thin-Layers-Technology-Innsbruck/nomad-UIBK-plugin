@@ -90,7 +90,7 @@ select = [
 
 ignore = [
     "F403", # 'from module import *' used; unable to detect undefined names
-    "PLC0415", # `import` should be at the top-level of a file
+    "PLC0415", # import not at the top
 ]
 
 fixable = ["ALL"]
@@ -123,6 +123,7 @@ where = ["src"]
 sample = "nomad_uibk_plugin.schema_packages:sample"
 xrfschema = "nomad_uibk_plugin.schema_packages:xrfschema"
 ifmschema = "nomad_uibk_plugin.schema_packages:ifmschema"
+effschema = "nomad_uibk_plugin.schema_packages:effschema"
 # parser
 xrfparser = "nomad_uibk_plugin.parsers:xrfparser"
 # unsure
