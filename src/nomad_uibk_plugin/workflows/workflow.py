@@ -1,18 +1,18 @@
 from datetime import timedelta
 
 from temporalio import workflow
+from temporalio.common import RetryPolicy
 
 with workflow.unsafe.imports_passed_through():
     from nomad_uibk_plugin.workflows.activities import (
-        construct_model_input,
-        get_model,
+        read_file,
         run_inference,
-        write_results,
+        write_to_archive,
     )
     from nomad_uibk_plugin.workflows.shared import (
         InferenceInput,
         # InferenceModelInput,
-#         InferenceResultsInput,
+        #         InferenceResultsInput,
     )
 
 
@@ -24,4 +24,25 @@ class InferenceWorkflow:
             run_inference,
             data,
             start_to_close_timeout=timedelta(seconds=600),
+            retry_policy=RetryPolicy(
+                maximum_attempts=5,
+            )
+        )
+        result_from_csv = await workflow.execute_activity(
+            read_file,
+            data.csv_path,
+            start_to_close_timeout=timedelta(seconds=60),
+            retry_policy=RetryPolicy(
+                maximum_attempts=5,
+            )
+        )
+        result_from_csv["user_id"] = data.user_id
+        result_from_csv["upload_id"] = data.upload_id
+        await workflow.execute_activity(
+            write_to_archive,
+            result_from_csv,
+            start_to_close_timeout=timedelta(seconds=60),
+            retry_policy=RetryPolicy(
+                maximum_attempts=5,
+            )
         )

@@ -8,17 +8,16 @@ class IFMLLMEntryPoint(BaseModel):
 
     def load(self):
         from nomad_uibk_plugin.workflows.activities import (
-            construct_model_input,
-            get_model,
+            read_file,
             run_inference,
-            write_results,
+            write_to_archive,
         )
         from nomad_uibk_plugin.workflows.workflow import InferenceWorkflow
 
         return BaseWorkflowHandler(
             task_queue=TaskQueue.GPU,
             workflows=[InferenceWorkflow],
-            activities=[get_model, construct_model_input, run_inference, write_results],
+            activities=[read_file, run_inference, write_to_archive],
         )
 
 
