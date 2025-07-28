@@ -6,10 +6,11 @@ from temporalio.common import RetryPolicy
 with workflow.unsafe.imports_passed_through():
     from nomad_uibk_plugin.workflows.activities import (
         read_file,
-        run_inference,
+        run_ifm_inference,
         write_to_archive,
     )
     from nomad_uibk_plugin.workflows.shared import (
+        CSVReadOutput,
         InferenceInput,
         # InferenceModelInput,
         #         InferenceResultsInput,
@@ -21,14 +22,15 @@ class InferenceWorkflow:
     @workflow.run
     async def run(self, data: InferenceInput):
         await workflow.execute_activity(
-            run_inference,
+            run_ifm_inference,
             data,
             start_to_close_timeout=timedelta(seconds=600),
             retry_policy=RetryPolicy(
                 maximum_attempts=5,
             )
         )
-        result_from_csv = await workflow.execute_activity(
+        print("@@@@@@@@ 1")
+        result_from_csv_dict = await workflow.execute_activity(
             read_file,
             data.csv_path,
             start_to_close_timeout=timedelta(seconds=60),
@@ -36,8 +38,11 @@ class InferenceWorkflow:
                 maximum_attempts=5,
             )
         )
-        result_from_csv["user_id"] = data.user_id
-        result_from_csv["upload_id"] = data.upload_id
+        result_from_csv = CSVReadOutput(**result_from_csv_dict) # type: ignore
+        print("@@@@@@@@@@@@@@@@@@@", type(result_from_csv))
+        result_from_csv.user_id = data.user_id
+        result_from_csv.upload_id = data.upload_id
+        print("@@@@@@@@ 3")
         await workflow.execute_activity(
             write_to_archive,
             result_from_csv,
@@ -46,3 +51,4 @@ class InferenceWorkflow:
                 maximum_attempts=5,
             )
         )
+        print(f"4")

@@ -19,6 +19,7 @@ from nomad_uibk_plugin.schema_packages.IFMschema import (
     IFMTwoStepAnalysisResult,
 )
 from nomad_uibk_plugin.workflows.shared import (
+    CSVReadOutput,
     InferenceInput,
     #     InferenceModelInput,
     InferenceResultsInput,
@@ -26,7 +27,7 @@ from nomad_uibk_plugin.workflows.shared import (
 
 
 @activity.defn
-async def run_inference(data: InferenceInput):
+async def run_ifm_inference(data: InferenceInput):
     if not os.path.exists(data.csv_path):
         activity.logger.info('Extracting defects...')
         defect_recognition(
@@ -51,51 +52,64 @@ async def read_file(csv_path: str):
             'No Error': 4,
         }
         defect_data['label'] = defect_data['type'].map(defect_mapping)
-        heatmap = go.Heatmap(
-            x=defect_data['x'],
-            y=defect_data['y'],
-            z=defect_data['label'],
-            colorscale='Viridis',
-            colorbar=dict(
-                tickvals=[1, 2, 3, 4],
-                ticktext=defect_columns,
-                title='Defect Type',
-            ),
-        )
+        defect_data_json=defect_data.to_json()
+        relative_share_json=relative_share.to_json()
+        # heatmap = go.Heatmap(
+        #     x=defect_data['x'],
+        #     y=defect_data['y'],
+        #     z=defect_data['label'],
+        #     colorscale='Viridis',
+        #     colorbar=dict(
+        #         tickvals=[1, 2, 3, 4],
+        #         ticktext=defect_columns,
+        #         title='Defect Type',
+        #     ),
+        # )
 
-        figure = go.Figure(data=heatmap)
-        figure.update_layout(
-            title='Heatmap of Defect Distribution',
-            xaxis_title='X Position',
-            yaxis_title='Y Position',
-            xaxis=dict(scaleanchor='y'),
-            yaxis=dict(scaleanchor='x'),
-            autosize=True,
-        )
+        # figure = go.Figure(data=heatmap)
+        # figure.update_layout(
+        #     title='Heatmap of Defect Distribution',
+        #     xaxis_title='X Position',
+        #     yaxis_title='Y Position',
+        #     xaxis=dict(scaleanchor='y'),
+        #     yaxis=dict(scaleanchor='x'),
+        #     autosize=True,
+        # )
 
-        figure_json = figure.to_plotly_json()
-        figure_json['config'] = {'staticPlot': True}
-        output_dict = {
-            "csv_path": csv_path,
-            "relative_share": relative_share,
-            "figure_json": figure_json,
-        }
-        return output_dict
+        # figure_json = figure.to_plotly_json()
+        # figure_json['config'] = {'staticPlot': True}
+        # output_dict = {
+            # 'csv_path': csv_path,
+            # 'relative_share': relative_share,
+            # 'figure_json': figure_json,
+        # }
+        # figure_str = figure.to_json()
+
+        output=CSVReadOutput(
+            upload_id="",
+            user_id="",
+            csv_path=csv_path,
+            defect_columns=defect_columns,
+            defect_data_json=defect_data_json,
+            relative_share_json=relative_share_json,
+        )
+        return output
 
 
 @activity.defn
-async def write_to_archive(result_dict: dict):
+async def write_to_archive(result_from_csv: CSVReadOutput):
     upload = get_upload_with_read_access(
-        result_dict["upload_id"],
-        User(user_id=result_dict["user_id"]),
+        result_from_csv.upload_id,
+        User(user_id=result_from_csv.user_id),
         include_others=True,
     )
-    analysis_entry = IFMAnalysisResult(file=result_dict["csv_path"])
+    analysis_entry = IFMAnalysisResult(file=result_from_csv.csv_path)
+    relative_share=pd.read_json(result_from_csv.relative_share_json)
     analysis_entry.defect_prevalence = DefectPrevalence(
-        whiskers=result_dict["relative_share"].get('Whiskers', 0),
-        chipping=result_dict["relative_share"].get('Chipping', 0),
-        scratch=result_dict["relative_share"].get('Scratch', 0),
-        no_error=result_dict["relative_share"].get('No Error', 0),
+        whiskers=relative_share.get('Whiskers', 0),
+        chipping=relative_share.get('Chipping', 0),
+        scratch=relative_share.get('Scratch', 0),
+        no_error=relative_share.get('No Error', 0),
     )
     fname = os.path.join('inference_result.archive.json')
     with open(fname, 'w', encoding='utf-8') as f:

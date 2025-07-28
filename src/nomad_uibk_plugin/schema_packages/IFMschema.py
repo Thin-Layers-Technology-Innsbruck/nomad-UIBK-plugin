@@ -481,11 +481,13 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
                             csv_path=csv_path,
                         )
                         workflow_name = 'nomad_UIBK_plugin.workflows.InferenceWorkflow'
+                        print(f"starting workflow name={workflow_name}")
                         workflow_id = orchestrator_utils.start_workflow(
                             workflow_name=workflow_name,
                             data=input_data,
                             task_queue=TaskQueue.GPU
                         )
+                        print(f"workflow has been started, id={workflow_id}")
                         if not self.triggered_inferences:
                             self.triggered_inferences = [InferenceStatus()]
                         else:
