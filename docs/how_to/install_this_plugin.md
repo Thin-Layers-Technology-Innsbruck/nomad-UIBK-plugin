@@ -2,7 +2,7 @@
 
 ## For Usage in an NOMAD Distribution Image
 
-To use this plugin in an NOMAD distribution image such as [this one](https://github.com/fabianschoeppach/nomad-UIBK-image) simply list it in the `plugin.txt`.
+To use this plugin in an NOMAD distribution image such as [this one](https://github.com/Thin-Layers-Technology-Innsbruck/nomad-uibk-image) simply list it in the `plugin.txt`.
 
 ## Stand alone
 

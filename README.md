@@ -3,18 +3,18 @@
 # NOMAD UIBK Plugin
 
 [![Python Version](https://img.shields.io/badge/python-3.9-blue.svg)](https://python.org)
-![GitHub Issues](https://img.shields.io/github/issues/fabianschoeppach/nomad-UIBK-plugin)
+![GitHub Issues](https://img.shields.io/github/issues/Thin-Layers-Technology-Innsbruck/nomad-UIBK-plugin)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-This software is a plugin for the [NOMAD](https://nomad-lab.eu/nomad-lab/) research data management system.  
-It provides a collection of schemas and parsers tailored to measurement methods around fundamental solar cell research.  
+This software is a plugin for the [NOMAD](https://nomad-lab.eu/nomad-lab/) research data management system.
+It provides a collection of schemas and parsers tailored to measurement methods around fundamental solar cell research.
 It is intended to run on a self-hosted version of NOMAD called [Oasis](https://nomad-lab.eu/nomad-lab/nomad-oasis.html).
 
 ## Installation
 
 ### For Usage in a NOMAD Distribution Image
 
-To use this plugin in an NOMAD distribution image [include it in its pyproject.toml](https://github.com/fabianschoeppach/nomad-UIBK-image?tab=readme-ov-file#adding-a-plugin) and generate a new image.
+To use this plugin in an NOMAD distribution image [include it in its pyproject.toml](https://github.com/Thin-Layers-Technology-Innsbruck/nomad-UIBK-image?tab=readme-ov-file#adding-a-plugin) and generate a new image.
 
 ### Stand alone installation and/or to customize the plugin
 
@@ -87,7 +87,7 @@ This plugin was generated with `Cookiecutter` along with NOMAD's [cookiecutter-n
 
 ### Template update
 
-We use cruft to update the project based on template changes. A `cruft-update.yml` is included in Github workflows to automatically check for updates and create pull requests to apply updates.  
+We use cruft to update the project based on template changes. A `cruft-update.yml` is included in Github workflows to automatically check for updates and create pull requests to apply updates.
 Follow the [instructions](https://github.blog/changelog/2022-05-03-github-actions-prevent-github-actions-from-creating-and-approving-pull-requests/) on how to enable Github Actions to create pull requests.
 
 To run the check for updates locally, follow the instructions on [`cruft` website](https://cruft.github.io/cruft/#updating-a-project).
