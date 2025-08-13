@@ -29,7 +29,6 @@ class InferenceWorkflow:
                 maximum_attempts=5,
             )
         )
-        print("@@@@@@@@ 1")
         result_from_csv_dict = await workflow.execute_activity(
             read_file,
             data.csv_path,
@@ -39,10 +38,8 @@ class InferenceWorkflow:
             )
         )
         result_from_csv = CSVReadOutput(**result_from_csv_dict) # type: ignore
-        print("@@@@@@@@@@@@@@@@@@@", type(result_from_csv))
         result_from_csv.user_id = data.user_id
         result_from_csv.upload_id = data.upload_id
-        print("@@@@@@@@ 3")
         await workflow.execute_activity(
             write_to_archive,
             result_from_csv,
@@ -51,4 +48,3 @@ class InferenceWorkflow:
                 maximum_attempts=5,
             )
         )
-        # print(f"4")

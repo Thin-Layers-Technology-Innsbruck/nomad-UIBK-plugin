@@ -480,15 +480,6 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
                             csv_path=csv_path,
                         )
                         workflow_name = 'nomad_UIBK_plugin.workflows.InferenceWorkflow'
-                        # db = config.mongo.db_name
-                        # print(f'%%%%%%% mongo {db}')
-                        # upload = get_upload_with_read_access(
-                        #     archive.metadata.upload_id,
-                        #     User(user_id=archive.metadata.authors[0].user_id),
-                        #     include_others=True,
-                        # )
-                        # print(f'upload={upload}')
-                        print(f"starting workflow name={workflow_name}")
                         workflow_id = orchestrator_utils.start_workflow(
                             workflow_name=workflow_name,
                             data=input_data,
