@@ -7,9 +7,11 @@ from ifm_image_defect_detection.defectRecognition_toCSV import (
     defect_recognition,
 )
 from nomad.app.v1.routers.uploads import get_upload_with_read_access
+from nomad.config import config
 from nomad.datamodel import User
 from nomad.datamodel.metainfo.plot import PlotlyFigure
 from nomad.datamodel.metainfo.workflow import Link
+from nomad.infrastructure import setup_mongo
 from nomad.orchestrator.utils import workflow_artifacts_dir
 from temporalio import activity
 
@@ -53,7 +55,7 @@ async def read_file(csv_path: str):
         }
         defect_data['label'] = defect_data['type'].map(defect_mapping)
         defect_data_json=defect_data.to_json()
-        relative_share_json=relative_share.to_json()
+        relative_share_json=relative_share.to_json(orient='table')
         # heatmap = go.Heatmap(
         #     x=defect_data['x'],
         #     y=defect_data['y'],
@@ -98,19 +100,23 @@ async def read_file(csv_path: str):
 
 @activity.defn
 async def write_to_archive(result_from_csv: CSVReadOutput):
+    print(f"######### 1 ## upload_id={result_from_csv.upload_id}, user={result_from_csv.user_id}")
+    setup_mongo()
     upload = get_upload_with_read_access(
         result_from_csv.upload_id,
         User(user_id=result_from_csv.user_id),
         include_others=True,
     )
+    print(f"####### 2 #### upload={upload}")
     analysis_entry = IFMAnalysisResult(file=result_from_csv.csv_path)
-    relative_share=pd.read_json(result_from_csv.relative_share_json)
+    relative_share=pd.read_json(result_from_csv.relative_share_json, orient='table')
     analysis_entry.defect_prevalence = DefectPrevalence(
         whiskers=relative_share.get('Whiskers', 0),
         chipping=relative_share.get('Chipping', 0),
         scratch=relative_share.get('Scratch', 0),
         no_error=relative_share.get('No Error', 0),
     )
+    print("######## 3 ####")
     fname = os.path.join('inference_result.archive.json')
     with open(fname, 'w', encoding='utf-8') as f:
         json.dump({'data': analysis_entry.m_to_dict(with_root_def=True)}, f, indent=4)

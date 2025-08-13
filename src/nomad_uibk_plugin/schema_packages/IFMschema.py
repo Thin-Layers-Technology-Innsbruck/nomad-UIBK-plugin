@@ -23,6 +23,9 @@ from typing import (
 
 import pandas as pd
 import plotly.graph_objs as go
+from nomad.app.v1.routers.uploads import get_upload_with_read_access
+from nomad.config import config
+from nomad.datamodel import User
 from nomad.datamodel.data import ArchiveSection, EntryData
 from nomad.datamodel.metainfo.annotations import (
     ELNAnnotation,
@@ -288,10 +291,6 @@ class InferenceStatus(ArchiveSection):
         type=str,
         description='Status of the inference workflow.',
     )
-    # generated_entry = Quantity(
-    #     type=CrystaLLMInferenceResult,
-    #     description='Reference to the generated entry after the workflow completes.',
-    # )
     trigger_get_status = Quantity(
         type=bool,
         default=False,
@@ -336,7 +335,7 @@ class InferenceSettings(ArchiveSection):
 
 class IFMTwoStepAnalysisResult(EntryData):
     m_def = Section(
-        label='IFMLLM Inference Result',
+        label='IFM Inference Result',
         a_eln=ELNAnnotation(
             properties=SectionProperties(
                 order=[
@@ -354,7 +353,7 @@ class IFMTwoStepAnalysisResult(EntryData):
     )
     inference_settings = SubSection(
         section_def=InferenceSettings,
-        description='Settings used for the LLM inference workflow'
+        description='Settings used for the inference workflow'
     )
 
 
@@ -416,7 +415,7 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
 
     # def run_workflow(self, archive, logger=None):
     #     """
-    #     Run the LLM workflow with the provided archive.
+    #     Run the workflow with the provided archive.
     #     """
     #     input_data = None           #change to actual input data here later on
     #     workflow_name = 'nomad_UIBK_plugin.workflows.InferenceWorkflow'
@@ -481,6 +480,14 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
                             csv_path=csv_path,
                         )
                         workflow_name = 'nomad_UIBK_plugin.workflows.InferenceWorkflow'
+                        # db = config.mongo.db_name
+                        # print(f'%%%%%%% mongo {db}')
+                        # upload = get_upload_with_read_access(
+                        #     archive.metadata.upload_id,
+                        #     User(user_id=archive.metadata.authors[0].user_id),
+                        #     include_others=True,
+                        # )
+                        # print(f'upload={upload}')
                         print(f"starting workflow name={workflow_name}")
                         workflow_id = orchestrator_utils.start_workflow(
                             workflow_name=workflow_name,
