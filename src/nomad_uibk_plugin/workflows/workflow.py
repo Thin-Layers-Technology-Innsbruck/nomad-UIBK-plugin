@@ -27,7 +27,7 @@ class InferenceWorkflow:
             start_to_close_timeout=timedelta(seconds=600),
             retry_policy=RetryPolicy(
                 maximum_attempts=5,
-            )
+            ),
         )
         result_from_csv_dict = await workflow.execute_activity(
             read_file,
@@ -35,9 +35,9 @@ class InferenceWorkflow:
             start_to_close_timeout=timedelta(seconds=60),
             retry_policy=RetryPolicy(
                 maximum_attempts=5,
-            )
+            ),
         )
-        result_from_csv = CSVReadOutput(**result_from_csv_dict) # type: ignore
+        result_from_csv = CSVReadOutput(**result_from_csv_dict)  # type: ignore
         result_from_csv.user_id = data.user_id
         result_from_csv.upload_id = data.upload_id
         await workflow.execute_activity(
@@ -46,5 +46,5 @@ class InferenceWorkflow:
             start_to_close_timeout=timedelta(seconds=60),
             retry_policy=RetryPolicy(
                 maximum_attempts=5,
-            )
+            ),
         )

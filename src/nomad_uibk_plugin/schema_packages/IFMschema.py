@@ -231,7 +231,12 @@ class DefectPrevalence(ArchiveSection):
     )
 
 
-class IFMAnalysisResult(ArchiveSection):
+class IFMTwoStepAnalysisResult(Entity, PlotSection, EntryData):
+    m_def = Section(
+        categories=[UIBKCategory],
+        label='IFM Two Step Analysis Result',
+    )
+
     file = Quantity(
         type=str,
         description='File containing the data.',
@@ -242,6 +247,10 @@ class IFMAnalysisResult(ArchiveSection):
         section_def=DefectPrevalence,
         description='Prevalence of defects in the image.',
     )
+
+    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+        super().normalize(archive, logger)
+        self.method = 'IFM Two Step Analysis Result'
 
 
 class ImageReference(EntityReference):
@@ -333,28 +342,28 @@ class InferenceSettings(ArchiveSection):
     model_classification_name: str
 
 
-class IFMTwoStepAnalysisResult(EntryData):
-    m_def = Section(
-        label='IFM Inference Result',
-        a_eln=ELNAnnotation(
-            properties=SectionProperties(
-                order=[
-                    'workflow_id',
-                    'status',
-                    'trigger_workflow_status',
-                    'inference_settings',
-                ]
-            ),
-        ),
-    )
-    workflow_id = Quantity(
-        type=str,
-        description='ID of the `temporalio` workflow',
-    )
-    inference_settings = SubSection(
-        section_def=InferenceSettings,
-        description='Settings used for the inference workflow'
-    )
+# class IFMTwoStepAnalysisResult(EntryData):
+#     m_def = Section(
+#         label='IFM Inference Result',
+#         a_eln=ELNAnnotation(
+#             properties=SectionProperties(
+#                 order=[
+#                     'workflow_id',
+#                     'status',
+#                     'trigger_workflow_status',
+#                     'inference_settings',
+#                 ]
+#             ),
+#         ),
+#     )
+#     workflow_id = Quantity(
+#         type=str,
+#         description='ID of the `temporalio` workflow',
+#     )
+#     inference_settings = SubSection(
+#         section_def=InferenceSettings,
+#         description='Settings used for the inference workflow'
+#     )
 
 
 class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
@@ -373,7 +382,7 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
         repeats=True,
     )
     outputs = SubSection(
-        section_def=IFMAnalysisResult,
+        section_def=IFMTwoStepAnalysisResult,
         description='Output data from the automated image analysis.',
         repeats=True,
     )
@@ -430,18 +439,17 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
     #         self.triggered_inferences.append(InferenceStatus()) # type: ignore
     #     self.triggered_inferences[-1].workflow_id = workflow_id
 
-
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
         super().normalize(archive, logger)
         self.method = 'IFM Two Step Analysis'
 
         # archive workflow linking
         if self.model_binary:
-            archive.workflow2.inputs.append( # type: ignore
+            archive.workflow2.inputs.append(  # type: ignore
                 Link(name='Binary Model', section=self.model_binary.reference)
             )
         if self.model_classification:
-            archive.workflow2.inputs.append( # type: ignore
+            archive.workflow2.inputs.append(  # type: ignore
                 Link(
                     name='Classification Model',
                     section=self.model_classification.reference,
@@ -455,12 +463,16 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
             self.outputs = []
             for input in self.inputs:
                 # here we execute Georgs code to extract the defects
-                
+
                 image_file = archive.m_context.raw_file(input.reference.image_file)
                 image_file_name = image_file.name
-                model_binary = archive.m_context.raw_file(self.model_binary.reference.file)
+                model_binary = archive.m_context.raw_file(
+                    self.model_binary.reference.file
+                )
                 model_binary_name = model_binary.name
-                model_classiciation = archive.m_context.raw_file(self.model_classification.reference.file)
+                model_classiciation = archive.m_context.raw_file(
+                    self.model_classification.reference.file
+                )
                 model_classiciation_name = model_classiciation.name
 
                 # create paths and names for the csv file and archive file
@@ -468,7 +480,7 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
                 filename, ext = os.path.splitext(filename_with_ext)
                 csv_path = os.path.join(path, f'{filename}_prediction.csv')
 
-                #run workflow with analysis, if triggered
+                # run workflow with analysis, if triggered
                 if self.trigger_run_workflow:
                     try:
                         input_data = InferenceInput(
@@ -483,21 +495,17 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
                         workflow_id = orchestrator_utils.start_workflow(
                             workflow_name=workflow_name,
                             data=input_data,
-                            task_queue=TaskQueue.GPU
+                            task_queue=TaskQueue.GPU,
                         )
-                        print(f"workflow has been started, id={workflow_id}")
+                        print(f'workflow has been started, id={workflow_id}')
                         if not self.triggered_inferences:
                             self.triggered_inferences = [InferenceStatus()]
                         else:
-                            self.triggered_inferences.append(InferenceStatus()) # type: ignore
-                        self.triggered_inferences[-1].workflow_id = workflow_id # type: ignore
+                            self.triggered_inferences.append(InferenceStatus())  # type: ignore
+                        self.triggered_inferences[-1].workflow_id = workflow_id  # type: ignore
                     except Exception as e:
                         logger.error(f'Error running workflow: {e}')
                     self.trigger_run_workflow = False
-
-
-
-
 
             #         if self.perform_analysis and not os.path.exists(csv_path):
             #             logger.info('Extracting defects...')
@@ -517,7 +525,7 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
             #             continue
 
             #         # create result subsection
-            #         analysis_entry = IFMAnalysisResult(file=csv_path)
+            #         analysis_entry = IFMTwoStepAnalysisResult(file=csv_path)
 
             #         # read csv file and extract the defect prevalence
             #         defect_data = pd.read_csv(csv_path, skiprows=2)
