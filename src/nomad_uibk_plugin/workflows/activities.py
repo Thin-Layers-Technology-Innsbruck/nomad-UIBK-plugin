@@ -8,12 +8,9 @@ from ifm_image_defect_detection.defectRecognition_toCSV import (
     defect_recognition,
 )
 from nomad.app.v1.routers.uploads import get_upload_with_read_access
-from nomad.config import config
 from nomad.datamodel import User
 from nomad.datamodel.metainfo.plot import PlotlyFigure
-from nomad.datamodel.metainfo.workflow import Link
 from nomad.infrastructure import setup_mongo
-from nomad.orchestrator.utils import workflow_artifacts_dir
 from temporalio import activity
 
 from nomad_uibk_plugin.schema_packages.IFMschema import (

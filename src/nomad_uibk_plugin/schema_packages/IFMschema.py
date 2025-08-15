@@ -21,23 +21,17 @@ from typing import (
     TYPE_CHECKING,
 )
 
-import pandas as pd
-import plotly.graph_objs as go
-from nomad.app.v1.routers.uploads import get_upload_with_read_access
-from nomad.config import config
-from nomad.datamodel import User
 from nomad.datamodel.data import ArchiveSection, EntryData
 from nomad.datamodel.metainfo.annotations import (
     ELNAnnotation,
     ELNComponentEnum,
-    SectionProperties,
 )
 from nomad.datamodel.metainfo.basesections import (
     Entity,
     EntityReference,
 )
 from nomad.datamodel.metainfo.eln import ELNAnalysis, ELNMeasurement
-from nomad.datamodel.metainfo.plot import PlotlyFigure, PlotSection
+from nomad.datamodel.metainfo.plot import PlotSection
 from nomad.datamodel.metainfo.workflow import Link
 from nomad.metainfo import Datetime, MEnum, Quantity, SchemaPackage, Section, SubSection
 from nomad.orchestrator import utils as orchestrator_utils
@@ -506,89 +500,6 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
                     except Exception as e:
                         logger.error(f'Error running workflow: {e}')
                     self.trigger_run_workflow = False
-
-            #         if self.perform_analysis and not os.path.exists(csv_path):
-            #             logger.info('Extracting defects...')
-            #             from ifm_image_defect_detection.defectRecognition_toCSV import (
-            #                 defect_recognition,
-            #             )
-
-            #             defect_recognition(
-            #                 image_file.name, model_binary.name, model_classiciation.name
-            #             )
-
-            #         if not os.path.exists(csv_path):
-            #             logger.warn(
-            #                 'The csv file does not exist. Please (re)run the analysis '
-            #                 'by checking "perform analysis" (again).'
-            #             )
-            #             continue
-
-            #         # create result subsection
-            #         analysis_entry = IFMTwoStepAnalysisResult(file=csv_path)
-
-            #         # read csv file and extract the defect prevalence
-            #         defect_data = pd.read_csv(csv_path, skiprows=2)
-            #         defect_columns = ['Whiskers', 'Chipping', 'Scratch', 'No Error']
-            #         defect_data['type'] = defect_data[defect_columns].idxmax(axis=1)
-            #         relative_share = defect_data['type'].value_counts(normalize=True)
-
-            #         analysis_entry.defect_prevalence = DefectPrevalence(
-            #             whiskers=relative_share.get('Whiskers', 0),
-            #             chipping=relative_share.get('Chipping', 0),
-            #             scratch=relative_share.get('Scratch', 0),
-            #             no_error=relative_share.get('No Error', 0),
-            #         )
-
-            #         # add the result to the analysis output and update the workflow
-            #         self.outputs.append(analysis_entry)
-            #         archive.workflow2.outputs.append(
-            #             Link(
-            #                 name='Extracted Features',
-            #                 section=analysis_entry,
-            #             )
-            #         )
-
-            #         # create plot
-            #         defect_mapping = {
-            #             'Whiskers': 1,
-            #             'Chipping': 2,
-            #             'Scratch': 3,
-            #             'No Error': 4,
-            #         }
-            #         defect_data['label'] = defect_data['type'].map(defect_mapping)
-
-            #         heatmap = go.Heatmap(
-            #             x=defect_data['x'],
-            #             y=defect_data['y'],
-            #             z=defect_data['label'],
-            #             colorscale='Viridis',
-            #             colorbar=dict(
-            #                 tickvals=[1, 2, 3, 4],
-            #                 ticktext=defect_columns,
-            #                 title='Defect Type',
-            #             ),
-            #         )
-
-            #         figure = go.Figure(data=heatmap)
-            #         figure.update_layout(
-            #             title='Heatmap of Defect Distribution',
-            #             xaxis_title='X Position',
-            #             yaxis_title='Y Position',
-            #             xaxis=dict(scaleanchor='y'),
-            #             yaxis=dict(scaleanchor='x'),
-            #             autosize=True,
-            #         )
-
-            #         figure_json = figure.to_plotly_json()
-            #         figure_json['config'] = {'staticPlot': True}
-            #         self.figures.append(
-            #             PlotlyFigure(
-            #                 label='Defect Distribution Heatmap',
-            #                 index=0,
-            #                 figure=figure_json,
-            #             )
-            #         )
 
             # self.perform_analysis = False
 
