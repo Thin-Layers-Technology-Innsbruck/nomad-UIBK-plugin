@@ -25,13 +25,13 @@ from nomad_uibk_plugin.workflows.shared import (
 
 @activity.defn
 async def run_ifm_inference(data: InferenceInput):
-    if not os.path.exists(data.csv_path):
+    if (not os.path.exists(data.csv_path)) or data.overwrite_existing_results:
         activity.logger.info('Extracting defects...')
         defect_recognition(
             data.image_file_name, data.model_binary_name, data.model_classification_name
         )
     else:
-        activity.logger.warning('Output file already exists')
+        activity.logger.warning('Output file already exists and not overwritten')
 
 
 @activity.defn

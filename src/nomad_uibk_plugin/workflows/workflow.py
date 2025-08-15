@@ -12,8 +12,6 @@ with workflow.unsafe.imports_passed_through():
     from nomad_uibk_plugin.workflows.shared import (
         CSVReadOutput,
         InferenceInput,
-        # InferenceModelInput,
-        #         InferenceResultsInput,
     )
 
 

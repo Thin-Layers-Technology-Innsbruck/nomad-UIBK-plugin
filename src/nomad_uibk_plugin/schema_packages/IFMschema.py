@@ -244,7 +244,6 @@ class IFMTwoStepAnalysisResult(Entity, PlotSection, EntryData):
 
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
         super().normalize(archive, logger)
-        self.method = 'IFM Two Step Analysis Result'
 
 
 class ImageReference(EntityReference):
@@ -283,6 +282,29 @@ class ModelReference(EntityReference):
             self.name = self.reference.name
 
 
+class IFMTwoStepAnalysisResultReference(EntityReference):
+    reference = Quantity(
+        type=IFMTwoStepAnalysisResult,
+        description='Reference to the IFM Two Step Analysis Result.',
+        a_eln=ELNAnnotation(
+            component='ReferenceEditQuantity',
+            label='section reference',
+        ),
+    )
+
+    workflow_id = Quantity(
+        type=str,
+        description='ID of the `temporalio` workflow.',
+    )
+
+    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+        super().normalize(archive, logger)
+
+        # Update name
+        if self.reference and self.name is None:
+            self.name = self.reference.name
+
+
 class InferenceStatus(ArchiveSection):
     """Section to fetch the status of an inference workflow."""
 
@@ -307,60 +329,30 @@ class InferenceStatus(ArchiveSection):
     def normalize(self, archive, logger=None):
         """Normalize the section to ensure it is ready for processing."""
         super().normalize(archive, logger)
-        # if not self.status or self.status == 'RUNNING' or self.trigger_get_status:
-        #     try:
-        #         status = orchestrator_utils.get_workflow_status(self.workflow_id)
-        #         if status:
-        #             self.status = status.name
-        #     except Exception as e:
-        #         logger.error(f'Error getting workflow status: {e}. ')
-        #     finally:
-        #         self.trigger_get_status = False
-        #     if self.status == 'COMPLETED':
-        #         reference = get_reference_from_mainfile(
-        #             archive.metadata.upload_id,
-        #             os.path.join(self.workflow_id, 'inference_result.archive.json'),
-        #         )
-        #         if not reference:
-        #             logger.error(
-        #                 'Unable to set reference for the generated entry for '
-        #                 f'workflow {self.workflow_id}.'
-        #             )
-        #         else:
-        #             self.generated_entry = reference
+        if not self.status or self.status == 'RUNNING' or self.trigger_get_status:
+            try:
+                status = orchestrator_utils.get_workflow_status(self.workflow_id)
+                if status:
+                    self.status = status.name
+            except Exception as e:
+                logger.error(f'Error getting workflow status: {e}. ')
+            finally:
+                self.trigger_get_status = False
+            # if self.status == 'COMPLETED':
+            #     reference = get_reference_from_mainfile(
+            #         archive.metadata.upload_id,
+            #         os.path.join(self.workflow_id, 'inference_result.archive.json'),
+            #     )
+            #     if not reference:
+            #         logger.error(
+            #             'Unable to set reference for the generated entry for '
+            #             f'workflow {self.workflow_id}.'
+            #         )
+            #     else:
+            #         self.generated_entry = reference
 
 
-class InferenceSettings(ArchiveSection):
-    image_file_name: str
-    model_binary_name: str
-    model_classification_name: str
-
-
-# class IFMTwoStepAnalysisResult(EntryData):
-#     m_def = Section(
-#         label='IFM Inference Result',
-#         a_eln=ELNAnnotation(
-#             properties=SectionProperties(
-#                 order=[
-#                     'workflow_id',
-#                     'status',
-#                     'trigger_workflow_status',
-#                     'inference_settings',
-#                 ]
-#             ),
-#         ),
-#     )
-#     workflow_id = Quantity(
-#         type=str,
-#         description='ID of the `temporalio` workflow',
-#     )
-#     inference_settings = SubSection(
-#         section_def=InferenceSettings,
-#         description='Settings used for the inference workflow'
-#     )
-
-
-class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
+class IFMTwoStepAnalysis(ELNAnalysis):
     """
     Automated image analysis entry.
     """
@@ -376,7 +368,7 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
         repeats=True,
     )
     outputs = SubSection(
-        section_def=IFMTwoStepAnalysisResult,
+        section_def=IFMTwoStepAnalysisResultReference,
         description='Output data from the automated image analysis.',
         repeats=True,
     )
@@ -389,12 +381,12 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
         description='Model for the automated image analysis.',
     )
 
-    # Execution Quantity
-    perform_analysis = Quantity(
+    overwrite_existing_results = Quantity(
         type=bool,
         description=(
-            'Check box to trigger the automated image analysis after assigning '
-            'the measurement(s) and the two models.'
+            'If checked, the existing inference results csv files will be overwritten.'
+            'Otherwise, only images without corresponding outputs will be processed,'
+            'processing for the other entries will be using existing files'
         ),
         default=False,
         a_eln=ELNAnnotation(component=ELNComponentEnum.BoolEditQuantity),
@@ -409,31 +401,24 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
         ),
     )
 
+    trigger_get_statuses = Quantity(
+        type=bool,
+        default=False,
+        description='Retrieve the current status of the inference workflows.',
+        a_eln=ELNAnnotation(
+            component=ELNComponentEnum.ActionEditQuantity,
+            label='Get Workflows Status',
+        ),
+    )
+
     triggered_inferences = SubSection(
         section_def=InferenceStatus,
         description='A section for storing the status of the triggered inference '
-        'workflow.',
+        'workflows.',
         repeats=True,
     )
 
-    # def run_workflow(self, archive, logger=None):
-    #     """
-    #     Run the workflow with the provided archive.
-    #     """
-    #     input_data = None           #change to actual input data here later on
-    #     workflow_name = 'nomad_UIBK_plugin.workflows.InferenceWorkflow'
-    #     workflow_id = orchestrator_utils.start_workflow(
-    #         workflow_name=workflow_name,
-    #         data=input_data,
-    #         task_queue=TaskQueue.GPU
-    #     )
-    #     if not self.triggered_inferences:
-    #         self.triggered_inferences = [InferenceStatus()]
-    #     else:
-    #         self.triggered_inferences.append(InferenceStatus()) # type: ignore
-    #     self.triggered_inferences[-1].workflow_id = workflow_id
-
-    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):  # noqa: PLR0912
         super().normalize(archive, logger)
         self.method = 'IFM Two Step Analysis'
 
@@ -454,28 +439,32 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
         if self.inputs and self.model_binary and self.model_classification:
             logger.info('Two Models found. Ready for IFM Two Step Analysis.')
 
-            self.outputs = []
-            for input in self.inputs:
-                # here we execute Georgs code to extract the defects
+            if self.trigger_run_workflow:
+                # remove subsections corresponding to previous runs
+                self.triggered_inferences = []
+                self.outputs = []
+                for input in self.inputs:
+                    # Execute workflow that runs Georgs code to extract the defects
+                    # and creates results entries
 
-                image_file = archive.m_context.raw_file(input.reference.image_file)
-                image_file_name = image_file.name
-                model_binary = archive.m_context.raw_file(
-                    self.model_binary.reference.file
-                )
-                model_binary_name = model_binary.name
-                model_classiciation = archive.m_context.raw_file(
-                    self.model_classification.reference.file
-                )
-                model_classiciation_name = model_classiciation.name
+                    image_file = archive.m_context.raw_file(input.reference.image_file)
+                    print(f'^^^^^image_file: {image_file},\n{type(image_file)}')
+                    image_file_name = image_file.name
+                    model_binary = archive.m_context.raw_file(
+                        self.model_binary.reference.file
+                    )
+                    model_binary_name = model_binary.name
+                    model_classiciation = archive.m_context.raw_file(
+                        self.model_classification.reference.file
+                    )
+                    model_classiciation_name = model_classiciation.name
 
-                # create paths and names for the csv file and archive file
-                path, filename_with_ext = os.path.split(image_file_name)
-                filename, ext = os.path.splitext(filename_with_ext)
-                csv_path = os.path.join(path, f'{filename}_prediction.csv')
+                    # create paths and names for the csv file and archive file
+                    path, filename_with_ext = os.path.split(image_file_name)
+                    filename, ext = os.path.splitext(filename_with_ext)
+                    csv_path = os.path.join(path, f'{filename}_prediction.csv')
 
-                # run workflow with analysis, if triggered
-                if self.trigger_run_workflow:
+                    # run workflow with analysis
                     try:
                         input_data = InferenceInput(
                             upload_id=archive.metadata.upload_id,
@@ -484,6 +473,7 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
                             model_binary_name=model_binary_name,
                             model_classification_name=model_classiciation_name,
                             csv_path=csv_path,
+                            overwrite_existing_results=self.overwrite_existing_results,
                         )
                         workflow_name = 'nomad_UIBK_plugin.workflows.InferenceWorkflow'
                         workflow_id = orchestrator_utils.start_workflow(
@@ -492,16 +482,44 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
                             task_queue=TaskQueue.GPU,
                         )
                         print(f'workflow has been started, id={workflow_id}')
-                        if not self.triggered_inferences:
-                            self.triggered_inferences = [InferenceStatus()]
-                        else:
-                            self.triggered_inferences.append(InferenceStatus())  # type: ignore
-                        self.triggered_inferences[-1].workflow_id = workflow_id  # type: ignore
+
+                        # create outputs (empty for now) and inference status for each
+                        # input image
+                        self.triggered_inferences.append(
+                            InferenceStatus(workflow_id=workflow_id)
+                        )  # type: ignore
+                        self.outputs.append(
+                            IFMTwoStepAnalysisResultReference(
+                                name=input.name + '_inference_result',
+                                workflow_id=workflow_id,
+                            )
+                        )  # type: ignore
                     except Exception as e:
                         logger.error(f'Error running workflow: {e}')
                     self.trigger_run_workflow = False
+                    self.overwrite_existing_results = False
 
-            # self.perform_analysis = False
+        elif self.model_binary and self.model_classification:
+            logger.warning(
+                'No inputs to process have been found. IFM analysis aborted.'
+            )
+        else:
+            logger.warning('No Models have been found. IFM analysis aborted.')
+
+        if self.trigger_get_statuses and self.triggered_inferences:
+            for inference in self.triggered_inferences:
+                try:
+                    status = orchestrator_utils.get_workflow_status(
+                        inference.workflow_id
+                    )
+                    if status:
+                        inference.status = status.name
+                except Exception as e:
+                    logger.error(f'Error getting workflow status: {e}. ')
+                finally:
+                    inference.trigger_get_status = False
+
+        self.trigger_get_statuses = False
 
 
 m_package.__init_metainfo__()

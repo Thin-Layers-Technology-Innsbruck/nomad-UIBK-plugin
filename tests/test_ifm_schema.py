@@ -40,13 +40,14 @@ def test_IFMModel():
     assert entry_archive.metadata.entry_type == 'IFMModel'
 
 
-def test_IFMAnalysis():
-    test_file = os.path.join(
-        os.path.dirname(__file__), 'data', 'test_IFMAnalysis.archive.json'
-    )
-    entry_archive = parse(test_file)[0]
-    normalize_all(entry_archive)
+# TODO: rewrite the tests after implementing temporal workflow for IFMTwoStepAnalysis
+# def test_IFMAnalysis():
+#     test_file = os.path.join(
+#         os.path.dirname(__file__), 'data', 'test_IFMAnalysis.archive.json'
+#     )
+#     entry_archive = parse(test_file)[0]
+#     normalize_all(entry_archive)
 
-    assert entry_archive.data.method == 'IFM Two Step Analysis'
-    assert entry_archive.metadata.entry_name == 'Analysis'
-    assert entry_archive.metadata.entry_type == 'IFMTwoStepAnalysis'
+#     assert entry_archive.data.method == 'IFM Two Step Analysis'
+#     assert entry_archive.metadata.entry_name == 'Analysis'
+#     assert entry_archive.metadata.entry_type == 'IFMTwoStepAnalysis'

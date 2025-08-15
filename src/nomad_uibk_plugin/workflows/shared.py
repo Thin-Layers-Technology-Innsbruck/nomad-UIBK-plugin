@@ -9,13 +9,14 @@ class InferenceInput:
     model_binary_name: str
     model_classification_name: str
     csv_path: str
+    overwrite_existing_results: bool
 
 
-@dataclass
-class InferenceResultsInput:
-    upload_id: str
-    user_id: str
-    model_data: InferenceInput
+# @dataclass
+# class InferenceResultsInput:
+#     upload_id: str
+#     user_id: str
+#     model_data: InferenceInput
 
 
 @dataclass
