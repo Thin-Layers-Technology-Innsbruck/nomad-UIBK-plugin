@@ -14,13 +14,13 @@ from nomad.infrastructure import setup_mongo
 from nomad.processing.data import Entry
 from temporalio import activity
 
+from nomad_uibk_plugin.actions.shared import (
+    CSVReadOutput,
+    InferenceInput,
+)
 from nomad_uibk_plugin.schema_packages.IFMschema import (
     DefectPrevalence,
     IFMTwoStepAnalysisResult,
-)
-from nomad_uibk_plugin.workflows.shared import (
-    CSVReadOutput,
-    InferenceInput,
 )
 
 
@@ -122,7 +122,7 @@ async def write_to_archive(result_from_csv: CSVReadOutput):
         name=result_name,
         file=result_from_csv.csv_path,
         defect_prevalence=defect_prevalence,
-        workflow_id=activity_info.workflow_id,
+        action_id=activity_info.workflow_id,
         figures=[
             PlotlyFigure(
                 label='Defect Distribution Heatmap',
@@ -146,16 +146,19 @@ async def write_to_archive(result_from_csv: CSVReadOutput):
     )
 
     # find entry_id for the resulting new entry
-    for entry in Entry.objects(upload_id=upload.upload_id):
-        if entry.mainfile == fname:
-            result_entry_id = entry.entry_id
-    result_entry_reference = f'../uploads/{upload.upload_id}/archive/{result_entry_id}'
+    # for entry in Entry.objects(upload_id=upload.upload_id): # type: ignore
+    #     if entry.mainfile == fname:
+    #         result_entry_id = entry.entry_id
+    # result_entry_reference = f'../uploads/{upload.upload_id}/archive/{result_entry_id}'
 
-    print(f'resulting ref: {result_entry_reference}')
+    # print(f'resulting ref: {result_entry_reference}')
 
     # find entry that triggered this workflow
-    triggering_entry = Entry.objects(upload_id=upload.upload_id, entry_id=result_from_csv.triggering_entry_id)[0]
-    print(f'######### {triggering_entry}')
+    # triggering_entry = Entry.objects( # type: ignore
+    #     upload_id=upload.upload_id,
+    #     entry_id=result_from_csv.triggering_entry_id
+    # )[0]
+    # print(f'######### {triggering_entry}')
     # for output in triggering_entry.data.outputs:
     #     activity_info = activity.info()
     #     if output.workflow_id == activity_info.workflow_id:

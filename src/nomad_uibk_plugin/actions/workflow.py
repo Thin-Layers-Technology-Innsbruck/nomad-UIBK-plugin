@@ -4,18 +4,18 @@ from temporalio import workflow
 from temporalio.common import RetryPolicy
 
 with workflow.unsafe.imports_passed_through():
-    from nomad_uibk_plugin.workflows.activities import (
+    from nomad_uibk_plugin.actions.activities import (
         read_file,
         run_ifm_inference,
         write_to_archive,
     )
-    from nomad_uibk_plugin.workflows.shared import (
+    from nomad_uibk_plugin.actions.shared import (
         CSVReadOutput,
         InferenceInput,
     )
 
 
-@workflow.defn(name='nomad_UIBK_plugin.workflows.InferenceWorkflow')
+@workflow.defn
 class InferenceWorkflow:
     @workflow.run
     async def run(self, data: InferenceInput):
