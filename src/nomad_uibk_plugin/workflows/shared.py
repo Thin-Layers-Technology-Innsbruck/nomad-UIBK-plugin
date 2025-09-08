@@ -5,6 +5,7 @@ from dataclasses import dataclass
 class InferenceInput:
     upload_id: str
     user_id: str
+    triggering_entry_id: str
     image_file_name: str
     model_binary_name: str
     model_classification_name: str
@@ -23,6 +24,7 @@ class InferenceInput:
 class CSVReadOutput:
     upload_id: str
     user_id: str
+    triggering_entry_id: str
     csv_path: str
     defect_data_json: str
     relative_share_json: str

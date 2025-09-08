@@ -11,6 +11,7 @@ from nomad.app.v1.routers.uploads import get_upload_with_read_access
 from nomad.datamodel import User
 from nomad.datamodel.metainfo.plot import PlotlyFigure
 from nomad.infrastructure import setup_mongo
+from nomad.processing.data import Entry
 from temporalio import activity
 
 from nomad_uibk_plugin.schema_packages.IFMschema import (
@@ -56,6 +57,7 @@ async def read_file(csv_path: str):
         output = CSVReadOutput(
             upload_id='',
             user_id='',
+            triggering_entry_id='',
             csv_path=csv_path,
             defect_columns=defect_columns,
             defect_data_json=defect_data_json,
@@ -82,6 +84,7 @@ async def write_to_archive(result_from_csv: CSVReadOutput):
         no_error=relative_share_series.get('No Error', 0.0),
     )
 
+    # create defects figure
     defect_data = pd.read_json(result_from_csv.defect_data_json, orient='table')
     heatmap = go.Heatmap(
         x=defect_data['x'],
@@ -108,15 +111,18 @@ async def write_to_archive(result_from_csv: CSVReadOutput):
     figure_json = figure.to_plotly_json()
     figure_json['config'] = {'staticPlot': True}
 
+    # create a new archive entry with the results of the analysis
     result_name = (
         re.sub(r'_prediction\.csv$', '', result_from_csv.csv_path.split('/')[-1])
         + '_inference_result'
     )
+    activity_info = activity.info()
 
     result_entry = IFMTwoStepAnalysisResult(
         name=result_name,
         file=result_from_csv.csv_path,
         defect_prevalence=defect_prevalence,
+        workflow_id=activity_info.workflow_id,
         figures=[
             PlotlyFigure(
                 label='Defect Distribution Heatmap',
@@ -126,6 +132,7 @@ async def write_to_archive(result_from_csv: CSVReadOutput):
         ],
     )
 
+    # add the new entry to the upload
     fname = os.path.join(result_name + '.archive.json')
     with open(fname, 'w', encoding='utf-8') as f:
         json.dump({'data': result_entry.m_to_dict(with_root_def=True)}, f, indent=4)
@@ -137,6 +144,24 @@ async def write_to_archive(result_from_csv: CSVReadOutput):
         ],
         only_updated_files=True,
     )
+
+    # find entry_id for the resulting new entry
+    for entry in Entry.objects(upload_id=upload.upload_id):
+        if entry.mainfile == fname:
+            result_entry_id = entry.entry_id
+    result_entry_reference = f'../uploads/{upload.upload_id}/archive/{result_entry_id}'
+
+    print(f'resulting ref: {result_entry_reference}')
+
+    # find entry that triggered this workflow
+    triggering_entry = Entry.objects(upload_id=upload.upload_id, entry_id=result_from_csv.triggering_entry_id)[0]
+    print(f'######### {triggering_entry}')
+    # for output in triggering_entry.data.outputs:
+    #     activity_info = activity.info()
+    #     if output.workflow_id == activity_info.workflow_id:
+    #         output.reference = result_entry_reference
+
+    # link the new entry to the IFMTwoStepAnalysis
 
     # self.outputs.append(analysis_entry)     # change self to proper object
     # archive.workflow2.outputs.append(

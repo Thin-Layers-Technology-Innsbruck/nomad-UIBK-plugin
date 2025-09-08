@@ -36,6 +36,7 @@ from nomad.datamodel.metainfo.workflow import Link
 from nomad.metainfo import Datetime, MEnum, Quantity, SchemaPackage, Section, SubSection
 from nomad.orchestrator import utils as orchestrator_utils
 from nomad.orchestrator.shared.constant import TaskQueue
+from nomad.processing.data import Entry
 from nomad_measurements.utils import (
     # create_archive,
     # get_entry_id_from_file_name,
@@ -45,6 +46,7 @@ from nomad_measurements.utils import (
 from pint import UnitRegistry
 
 from nomad_uibk_plugin.schema_packages import UIBKCategory
+from nomad_uibk_plugin.schema_packages.IFMschema_extra import IFMMeasurement
 from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
 from nomad_uibk_plugin.workflows.shared import InferenceInput
 
@@ -57,105 +59,108 @@ ureg = UnitRegistry()
 m_package = SchemaPackage()
 
 
-class IFMMeasurement(ELNMeasurement):
-    """
-    IFM Measurement entry.
-    """
+# class IFMMeasurement(ELNMeasurement):
+#     """
+#     IFM Measurement entry.
+#     """
 
-    m_def = Section(
-        categories=[UIBKCategory],
-        label='IFM Measurement',
-    )
+#     m_def = Section(
+#         categories=[UIBKCategory],
+#         label='IFM Measurement',
+#         a_template=dict(
+#             measurement_identifiers=dict(),
+#         ),
+#     )
 
-    image_file = Quantity(
-        type=str,
-        description='File containing the microscopy image.',
-        a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
-    )
+#     image_file = Quantity(
+#         type=str,
+#         description='File containing the microscopy image.',
+#         a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
+#     )
 
-    metadata_file = Quantity(
-        type=str,
-        description='File containing the measurement metadata.',
-        a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
-    )
+#     metadata_file = Quantity(
+#         type=str,
+#         description='File containing the measurement metadata.',
+#         a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
+#     )
 
-    # Overwrite sample references with UIBKSampleReference
-    samples = SubSection(
-        section_def=UIBKSampleReference,
-        description="""
-        A list of all the samples measured during the measurement.
-        """,
-        repeats=True,
-    )
-    sample_id = Quantity(
-        type=str,
-        description='ID of the sample measured.',
-        a_eln=ELNAnnotation(component=ELNComponentEnum.StringEditQuantity),
-    )
+#     # Overwrite sample references with UIBKSampleReference
+#     samples = SubSection(
+#         section_def=UIBKSampleReference,
+#         description="""
+#         A list of all the samples measured during the measurement.
+#         """,
+#         repeats=True,
+#     )
+#     sample_id = Quantity(
+#         type=str,
+#         description='ID of the sample measured.',
+#         a_eln=ELNAnnotation(component=ELNComponentEnum.StringEditQuantity),
+#     )
 
-    # Metadata Quantities
-    start_time = Quantity(
-        type=Datetime,
-        description='The date and time when this process was started.',
-        a_eln=dict(label='start time'),  # component='DateTimeEditQuantity'
-    )
+#     # Metadata Quantities
+#     start_time = Quantity(
+#         type=Datetime,
+#         description='The date and time when this process was started.',
+#         a_eln=dict(label='start time'),  # component='DateTimeEditQuantity'
+#     )
 
-    end_time = Quantity(
-        type=Datetime,
-        description='The date and time when this process was finished.',
-        a_eln=dict(label='end time'),
-    )
+#     end_time = Quantity(
+#         type=Datetime,
+#         description='The date and time when this process was finished.',
+#         a_eln=dict(label='end time'),
+#     )
 
-    exposure_time = Quantity(
-        type=float,
-        description='Exposure time of the image.',
-        unit='second',
-        a_eln=ELNAnnotation(defaultDisplayUnit='µs'),
-    )
+#     exposure_time = Quantity(
+#         type=float,
+#         description='Exposure time of the image.',
+#         unit='second',
+#         a_eln=ELNAnnotation(defaultDisplayUnit='µs'),
+#     )
 
-    device = Quantity(
-        type=str,
-        description='Device used for the measurement.',
-        a_eln=dict(label='measurement device'),
-    )
+#     device = Quantity(
+#         type=str,
+#         description='Device used for the measurement.',
+#         a_eln=dict(label='measurement device'),
+#     )
 
-    magnification = Quantity(
-        type=float,
-        description='Magnification used for the measurement.',
-    )
+#     magnification = Quantity(
+#         type=float,
+#         description='Magnification used for the measurement.',
+#     )
 
-    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
-        """
-        Tasks in here:
-        - Read the metadata file and extract information from it.
-        - Update the sample references if lab_id is given.
-        """
+#     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+#         """
+#         Tasks in here:
+#         - Read the metadata file and extract information from it.
+#         - Update the sample references if lab_id is given.
+#         """
 
-        self.method = 'IFM Measurement'
+#         self.method = 'IFM Measurement'
 
-        # Read metadata from file
-        if self.metadata_file is not None:
-            logger.info('Metadata file recognized. Parsing...')
+#         # Read metadata from file
+#         if self.metadata_file is not None:
+#             logger.info('Metadata file recognized. Parsing...')
 
-            from nomad_uibk_plugin.filereader.IFMreader import read_ifm_xml
+#             from nomad_uibk_plugin.filereader.IFMreader import read_ifm_xml
 
-            with archive.m_context.raw_file(self.metadata_file) as file:
-                measurement = read_ifm_xml(file, archive, logger)
-                merge_sections(self, measurement, logger)
+#             with archive.m_context.raw_file(self.metadata_file) as file:
+#                 measurement = read_ifm_xml(file, archive, logger)
+#                 merge_sections(self, measurement, logger)
 
-        # Update sample references
-        if self.sample_id and not self.samples:
-            self.samples = [
-                UIBKSampleReference(name=self.sample_id, lab_id=self.sample_id)
-            ]
-        elif self.samples and not self.sample_id:
-            self.sample_id = self.samples[0].lab_id
+#         # Update sample references
+#         if self.sample_id and not self.samples:
+#             self.samples = [
+#                 UIBKSampleReference(name=self.sample_id, lab_id=self.sample_id)
+#             ]
+#         elif self.samples and not self.sample_id:
+#             self.sample_id = self.samples[0].lab_id
 
-        # Update measurement name
-        if self.samples:
-            self.name = f'IFM Measurement of {self.samples[0].name}'
+#         # Update measurement name
+#         if self.samples:
+#             self.name = f'IFM Measurement of {self.samples[0].name}'
 
-        super().normalize(archive, logger)
+#         super().normalize(archive, logger)
 
 
 class IFMModel(Entity, EntryData):
@@ -242,6 +247,11 @@ class IFMTwoStepAnalysisResult(Entity, PlotSection, EntryData):
         description='Prevalence of defects in the image.',
     )
 
+    workflow_id = Quantity(
+        type=str,
+        description='ID of the `temporalio` workflow.',
+    )
+
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
         super().normalize(archive, logger)
 
@@ -326,7 +336,7 @@ class InferenceStatus(ArchiveSection):
         ),
     )
 
-    def normalize(self, archive, logger=None):
+    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
         """Normalize the section to ensure it is ready for processing."""
         super().normalize(archive, logger)
         if not self.status or self.status == 'RUNNING' or self.trigger_get_status:
@@ -469,6 +479,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                         input_data = InferenceInput(
                             upload_id=archive.metadata.upload_id,
                             user_id=archive.metadata.authors[0].user_id,
+                            triggering_entry_id=archive.metadata.entry_id,
                             image_file_name=image_file_name,
                             model_binary_name=model_binary_name,
                             model_classification_name=model_classiciation_name,
@@ -482,6 +493,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                             task_queue=TaskQueue.GPU,
                         )
                         print(f'workflow has been started, id={workflow_id}')
+                        print(f'entry id: {archive.metadata.entry_id}')
 
                         # create outputs (empty for now) and inference status for each
                         # input image
@@ -518,6 +530,21 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                     logger.error(f'Error getting workflow status: {e}. ')
                 finally:
                     inference.trigger_get_status = False
+
+        # TODO: get back to this when I have sample and image schema + parser
+        # if self.triggered_inferences:
+        #     for inference in self.triggered_inferences:
+        #         if (
+        #             self.trigger_get_statuses or inference.trigger_get_status
+        #         ) and inference.status == 'COMPLETED':
+        #             # search for the result to link to outputs
+        #             result_entry_id = None
+        #             for entry in Entry.objects(upload_id=archive.metadata.upload_id):
+        #                 if entry.mainfile == mainfile:
+        #                     result_entry_id = entry.entry_id
+        #             if result_entry_id is None:
+        #                 logger.warning('the output file was not found.')
+        #             f'../uploads/{archive.metadata.upload_id}/archive/{result_entry_id}#/data'
 
         self.trigger_get_statuses = False
 
