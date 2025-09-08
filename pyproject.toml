@@ -129,6 +129,7 @@ xrfparser = "nomad_uibk_plugin.parsers:xrfparser"
 # unsure
 #microcellschema = "nomad_uibk_plugin.schema_packages:microcellschema"
 ifmparser = "nomad_uibk_plugin.parsers:ifmparser"
+ifmmodelparser = "nomad_uibk_plugin.parsers:ifmmodelparser"
 #ebicparser = "nomad_uibk_plugin.parsers:ebicparser"
 #ifmworkflow = "nomad_uibk_plugin.workflows:ifmworkflow"
 ifm_inference = "nomad_uibk_plugin.actions:ifm_inference"

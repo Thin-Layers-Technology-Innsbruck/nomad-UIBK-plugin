@@ -8,7 +8,7 @@ from nomad.metainfo import Quantity
 from nomad.parsing.parser import MatchingParser
 from nomad_measurements.utils import create_archive
 
-from nomad_uibk_plugin.schema_packages.IFMschema_extra import IFMMeasurement
+from nomad_uibk_plugin.schema_packages.IFMschema_extra import IFMMeasurement, IFMModel
 
 if TYPE_CHECKING:
     from nomad.datamodel.datamodel import EntryArchive
@@ -32,7 +32,7 @@ class RawFileIFMMeasData(EntryData):
 
 class IFMParser(MatchingParser):
     """
-    Parser for matching IFM .bmp files and creating instances of IFMMeasurement.
+    Parser for matching IFM .bmp or .xml files and creating instances of IFMMeasurement.
     """
 
     def parse(
@@ -40,7 +40,6 @@ class IFMParser(MatchingParser):
         mainfile: str,
         archive: 'EntryArchive',
         logger: 'BoundLogger',
-        child_archives: dict[str, 'EntryArchive'] = None,
     ) -> None:
         print('1')
         logger.info('IFMParser.parse')
@@ -55,6 +54,45 @@ class IFMParser(MatchingParser):
             print('3')
             file_str = re.sub(r'_info$', '', file_str)
             file_name = f'{file_str}.archive.json'
+        # entry.image_file = data_file
+        # archive.data = ElnParserRawFile()
+        create_archive(
+            entity=entry,
+            archive=archive,
+            file_name=file_name,
+            overwrite=True,
+        )
+        # archive.data = RawFileIFMMeasData(
+        #     measurement = create_archive(entry, archive, file_name)
+        # )
+        # archive.metadata.entry_name = f'{data_file} data file'
+
+
+class IFMModelParser(MatchingParser):
+    """
+    Parser for matching IFM .bmp or .xml files and creating instances of IFMMeasurement.
+    """
+
+    def parse(
+        self,
+        mainfile: str,
+        archive: 'EntryArchive',
+        logger: 'BoundLogger',
+    ) -> None:
+        print('m1')
+        logger.info('IFMModelParser.parse')
+        data_file = mainfile.split('/')[-1]
+        entry = IFMModel.m_from_dict(IFMModel.m_def.a_template)
+        # entry.data_file = data_file
+        file_str = "".join(data_file.split(".")[:-1])
+        file_name = f'{file_str}.archive.json'
+        # if data_file.endswith('_binary.keras'):
+        #     print('m2')
+        #     file_name = f'{file_str}.archive.json'
+        # else:
+        #     print('m3')
+        #     file_str = re.sub(r'_info$', '', file_str)
+        #     file_name = f'{file_str}.archive.json'
         # entry.image_file = data_file
         # archive.data = ElnParserRawFile()
         create_archive(

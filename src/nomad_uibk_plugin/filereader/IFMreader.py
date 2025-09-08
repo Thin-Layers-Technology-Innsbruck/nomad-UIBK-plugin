@@ -24,8 +24,8 @@ from typing import TYPE_CHECKING, TextIO
 
 import tensorflow as tf
 
-from nomad_uibk_plugin.schema_packages.IFMschema import IFMModel, ureg
-from nomad_uibk_plugin.schema_packages.IFMschema_extra import IFMMeasurement
+from nomad_uibk_plugin.schema_packages.IFMschema import ureg
+from nomad_uibk_plugin.schema_packages.IFMschema_extra import IFMMeasurement, IFMModel
 
 if TYPE_CHECKING:
     from nomad.datamodel.datamodel import EntryArchive

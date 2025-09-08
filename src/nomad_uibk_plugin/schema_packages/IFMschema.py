@@ -46,7 +46,7 @@ from pint import UnitRegistry
 
 from nomad_uibk_plugin.actions.shared import InferenceInput
 from nomad_uibk_plugin.schema_packages import UIBKCategory
-from nomad_uibk_plugin.schema_packages.IFMschema_extra import IFMMeasurement
+from nomad_uibk_plugin.schema_packages.IFMschema_extra import IFMMeasurement, IFMModel
 from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
 
 if TYPE_CHECKING:
@@ -162,52 +162,52 @@ m_package = SchemaPackage()
 #         super().normalize(archive, logger)
 
 
-class IFMModel(Entity, EntryData):
-    """
-    Model for the automated image analysis.
-    """
+# class IFMModel(Entity, EntryData):
+#     """
+#     Model for the automated image analysis.
+#     """
 
-    m_def = Section(
-        categories=[UIBKCategory],
-        label='IFM Model',
-    )
+#     m_def = Section(
+#         categories=[UIBKCategory],
+#         label='IFM Model',
+#     )
 
-    file = Quantity(
-        type=str,
-        description='File containing the data.',
-        a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
-    )
+#     file = Quantity(
+#         type=str,
+#         description='File containing the data.',
+#         a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
+#     )
 
-    # Metadata Quantities
-    type = Quantity(
-        type=MEnum('binary', 'classification'), description='Type of the model.'
-    )
+#     # Metadata Quantities
+#     type = Quantity(
+#         type=MEnum('binary', 'classification'), description='Type of the model.'
+#     )
 
-    number_of_layers = Quantity(
-        type=int,
-        description='Number of layers in the model.',
-    )
+#     number_of_layers = Quantity(
+#         type=int,
+#         description='Number of layers in the model.',
+#     )
 
-    number_of_parameters = Quantity(
-        type=int,
-        description='Number of parameters in the model.',
-    )
+#     number_of_parameters = Quantity(
+#         type=int,
+#         description='Number of parameters in the model.',
+#     )
 
-    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
-        """
-        Read the model file and extract the metadata.
-        """
-        super().normalize(archive, logger)
-        self.method = 'IFM Model'
+#     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+#         """
+#         Read the model file and extract the metadata.
+#         """
+#         super().normalize(archive, logger)
+#         self.method = 'IFM Model'
 
-        if self.file is not None:
-            logger.info('Model file recognized. Parsing...')
+#         if self.file is not None:
+#             logger.info('Model file recognized. Parsing...')
 
-            from nomad_uibk_plugin.filereader.IFMreader import read_keras_metadata
+#             from nomad_uibk_plugin.filereader.IFMreader import read_keras_metadata
 
-            with archive.m_context.raw_file(self.file, 'rb') as file:
-                model = read_keras_metadata(file, archive, logger)
-                merge_sections(self, model, logger)
+#             with archive.m_context.raw_file(self.file, 'rb') as file:
+#                 model = read_keras_metadata(file, archive, logger)
+#                 merge_sections(self, model, logger)
 
 
 class DefectPrevalence(ArchiveSection):

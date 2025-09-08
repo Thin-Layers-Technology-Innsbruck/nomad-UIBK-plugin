@@ -21,12 +21,14 @@ from typing import (
     TYPE_CHECKING,
 )
 
+from nomad.datamodel.data import EntryData
 from nomad.datamodel.metainfo.annotations import (
     ELNAnnotation,
     ELNComponentEnum,
 )
+from nomad.datamodel.metainfo.basesections import Entity, ReadableIdentifiers
 from nomad.datamodel.metainfo.eln import ELNMeasurement
-from nomad.metainfo import Datetime, Quantity, SchemaPackage, Section, SubSection
+from nomad.metainfo import Datetime, MEnum, Quantity, SchemaPackage, Section, SubSection
 from nomad_measurements.utils import (
     # create_archive,
     # get_entry_id_from_file_name,
@@ -163,5 +165,68 @@ class IFMMeasurement(ELNMeasurement):
 
         super().normalize(archive, logger)
 
+
+class IFMModel(Entity, EntryData):
+    """
+    Model for the automated image analysis.
+    """
+
+    m_def = Section(
+        categories=[UIBKCategory],
+        label='IFM Model',
+        a_template=dict(
+            measurement_identifiers=dict(),
+        ),
+    )
+
+    measurement_identifiers = SubSection(
+        section_def=ReadableIdentifiers,
+    )
+
+    file = Quantity(
+        type=str,
+        description='File containing the data.',
+        a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
+    )
+
+    # Metadata Quantities
+    type = Quantity(
+        type=MEnum('binary', 'classification'), description='Type of the model.'
+    )
+
+    number_of_layers = Quantity(
+        type=int,
+        description='Number of layers in the model.',
+    )
+
+    number_of_parameters = Quantity(
+        type=int,
+        description='Number of parameters in the model.',
+    )
+
+    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+        """
+        Read the model file and extract the metadata.
+        """
+        super().normalize(archive, logger)
+        self.method = 'IFM Model'
+
+        # find corresponding data files
+        source_name = re.sub(r'\.archive\.json$', '', archive.metadata.mainfile) + '.keras'
+
+        from nomad.processing.data import Entry
+
+        for entry in Entry.objects(upload_id=archive.metadata.upload_id):
+            if entry.mainfile == source_name:
+                self.file = source_name
+
+        if self.file is not None:
+            logger.info('Model file recognized. Parsing...')
+
+            from nomad_uibk_plugin.filereader.IFMreader import read_keras_metadata
+
+            with archive.m_context.raw_file(self.file, 'rb') as file:
+                model = read_keras_metadata(file, archive, logger)
+                merge_sections(self, model, logger)
 
 m_package.__init_metainfo__()
