@@ -21,7 +21,7 @@ from typing import (
     TYPE_CHECKING,
 )
 
-from nomad.actions.utils import get_action_status, start_action
+from nomad.actions.utils import get_action_result, get_action_status, start_action
 from nomad.datamodel.data import ArchiveSection, EntryData
 from nomad.datamodel.metainfo.annotations import (
     ELNAnnotation,
@@ -34,20 +34,14 @@ from nomad.datamodel.metainfo.basesections import (
 from nomad.datamodel.metainfo.eln import ELNAnalysis
 from nomad.datamodel.metainfo.plot import PlotSection
 from nomad.datamodel.metainfo.workflow import Link
-from nomad.metainfo import Datetime, MEnum, Quantity, SchemaPackage, Section, SubSection
-from nomad.processing.data import Entry
-from nomad_measurements.utils import (
-    # create_archive,
-    # get_entry_id_from_file_name,
-    # get_reference,
-    merge_sections,
-)
+from nomad.metainfo import Quantity, SchemaPackage, Section, SubSection
 from pint import UnitRegistry
 
 from nomad_uibk_plugin.actions.shared import InferenceInput
 from nomad_uibk_plugin.schema_packages import UIBKCategory
 from nomad_uibk_plugin.schema_packages.IFMschema_extra import IFMMeasurement, IFMModel
-from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
+
+# from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
 
 if TYPE_CHECKING:
     from nomad.datamodel import EntryArchive
@@ -56,158 +50,6 @@ if TYPE_CHECKING:
 ureg = UnitRegistry()
 
 m_package = SchemaPackage()
-
-
-# class IFMMeasurement(ELNMeasurement):
-#     """
-#     IFM Measurement entry.
-#     """
-
-#     m_def = Section(
-#         categories=[UIBKCategory],
-#         label='IFM Measurement',
-#         a_template=dict(
-#             measurement_identifiers=dict(),
-#         ),
-#     )
-
-#     image_file = Quantity(
-#         type=str,
-#         description='File containing the microscopy image.',
-#         a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
-#     )
-
-#     metadata_file = Quantity(
-#         type=str,
-#         description='File containing the measurement metadata.',
-#         a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
-#     )
-
-#     # Overwrite sample references with UIBKSampleReference
-#     samples = SubSection(
-#         section_def=UIBKSampleReference,
-#         description="""
-#         A list of all the samples measured during the measurement.
-#         """,
-#         repeats=True,
-#     )
-#     sample_id = Quantity(
-#         type=str,
-#         description='ID of the sample measured.',
-#         a_eln=ELNAnnotation(component=ELNComponentEnum.StringEditQuantity),
-#     )
-
-#     # Metadata Quantities
-#     start_time = Quantity(
-#         type=Datetime,
-#         description='The date and time when this process was started.',
-#         a_eln=dict(label='start time'),  # component='DateTimeEditQuantity'
-#     )
-
-#     end_time = Quantity(
-#         type=Datetime,
-#         description='The date and time when this process was finished.',
-#         a_eln=dict(label='end time'),
-#     )
-
-#     exposure_time = Quantity(
-#         type=float,
-#         description='Exposure time of the image.',
-#         unit='second',
-#         a_eln=ELNAnnotation(defaultDisplayUnit='µs'),
-#     )
-
-#     device = Quantity(
-#         type=str,
-#         description='Device used for the measurement.',
-#         a_eln=dict(label='measurement device'),
-#     )
-
-#     magnification = Quantity(
-#         type=float,
-#         description='Magnification used for the measurement.',
-#     )
-
-#     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
-#         """
-#         Tasks in here:
-#         - Read the metadata file and extract information from it.
-#         - Update the sample references if lab_id is given.
-#         """
-
-#         self.method = 'IFM Measurement'
-
-#         # Read metadata from file
-#         if self.metadata_file is not None:
-#             logger.info('Metadata file recognized. Parsing...')
-
-#             from nomad_uibk_plugin.filereader.IFMreader import read_ifm_xml
-
-#             with archive.m_context.raw_file(self.metadata_file) as file:
-#                 measurement = read_ifm_xml(file, archive, logger)
-#                 merge_sections(self, measurement, logger)
-
-#         # Update sample references
-#         if self.sample_id and not self.samples:
-#             self.samples = [
-#                 UIBKSampleReference(name=self.sample_id, lab_id=self.sample_id)
-#             ]
-#         elif self.samples and not self.sample_id:
-#             self.sample_id = self.samples[0].lab_id
-
-#         # Update measurement name
-#         if self.samples:
-#             self.name = f'IFM Measurement of {self.samples[0].name}'
-
-#         super().normalize(archive, logger)
-
-
-# class IFMModel(Entity, EntryData):
-#     """
-#     Model for the automated image analysis.
-#     """
-
-#     m_def = Section(
-#         categories=[UIBKCategory],
-#         label='IFM Model',
-#     )
-
-#     file = Quantity(
-#         type=str,
-#         description='File containing the data.',
-#         a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
-#     )
-
-#     # Metadata Quantities
-#     type = Quantity(
-#         type=MEnum('binary', 'classification'), description='Type of the model.'
-#     )
-
-#     number_of_layers = Quantity(
-#         type=int,
-#         description='Number of layers in the model.',
-#     )
-
-#     number_of_parameters = Quantity(
-#         type=int,
-#         description='Number of parameters in the model.',
-#     )
-
-#     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
-#         """
-#         Read the model file and extract the metadata.
-#         """
-#         super().normalize(archive, logger)
-#         self.method = 'IFM Model'
-
-#         if self.file is not None:
-#             logger.info('Model file recognized. Parsing...')
-
-#             from nomad_uibk_plugin.filereader.IFMreader import read_keras_metadata
-
-#             with archive.m_context.raw_file(self.file, 'rb') as file:
-#                 model = read_keras_metadata(file, archive, logger)
-#                 merge_sections(self, model, logger)
 
 
 class DefectPrevalence(ArchiveSection):
@@ -340,25 +182,13 @@ class InferenceStatus(ArchiveSection):
         super().normalize(archive, logger)
         if not self.status or self.status == 'RUNNING' or self.trigger_get_status:
             try:
-                status = get_action_status(self.action_id) # pyright: ignore[reportArgumentType]
+                status = get_action_status(self.action_id)  # pyright: ignore[reportArgumentType]
                 if status:
                     self.status = status.name
             except Exception as e:
                 logger.error(f'Error getting action status: {e}. ')
             finally:
                 self.trigger_get_status = False
-            # if self.status == 'COMPLETED':
-            #     reference = get_reference_from_mainfile(
-            #         archive.metadata.upload_id,
-            #         os.path.join(self.action_id, 'inference_result.archive.json'),
-            #     )
-            #     if not reference:
-            #         logger.error(
-            #             'Unable to set reference for the generated entry for '
-            #             f'action {self.action_id}.'
-            #         )
-            #     else:
-            #         self.generated_entry = reference
 
 
 class IFMTwoStepAnalysis(ELNAnalysis):
@@ -428,6 +258,28 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         repeats=True,
     )
 
+    def check_results(self, logger: 'BoundLogger'):
+        if self.trigger_get_statuses and self.triggered_inferences:
+            for inference in self.triggered_inferences:
+                try:
+                    status = get_action_status(inference.action_id)
+                    if status:
+                        inference.status = status.name
+                except Exception as e:
+                    logger.error(f'Error getting action status: {e}. ')
+                finally:
+                    inference.trigger_get_status = False
+
+        if self.triggered_inferences:
+            for inference in self.triggered_inferences:
+                if inference.status == 'COMPLETED':
+                    result_ref = get_action_result(inference.action_id)
+                    for output in self.outputs:
+                        if output.action_id == inference.action_id:
+                            output.reference = result_ref
+
+        self.trigger_get_statuses = False
+
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):  # noqa: PLR0912
         super().normalize(archive, logger)
         self.method = 'IFM Two Step Analysis'
@@ -458,7 +310,6 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                     # and creates results entries
 
                     image_file = archive.m_context.raw_file(input.reference.image_file)
-                    print(f'^^^^^image_file: {image_file},\n{type(image_file)}')
                     image_file_name = image_file.name
                     model_binary = archive.m_context.raw_file(
                         self.model_binary.reference.file
@@ -486,13 +337,10 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                             csv_path=csv_path,
                             overwrite_existing_results=self.overwrite_existing_results,
                         )
-                        print(input_data)
                         action_id = start_action(
                             action_id='nomad_uibk_plugin.actions:ifm_inference',
                             data=input_data,
                         )
-                        print(f'action has been started, id={action_id}')
-                        print(f'entry id: {archive.metadata.entry_id}')
 
                         # create outputs (empty for now) and inference status for each
                         # input image
@@ -517,33 +365,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         else:
             logger.warning('No Models have been found. IFM analysis aborted.')
 
-        if self.trigger_get_statuses and self.triggered_inferences:
-            for inference in self.triggered_inferences:
-                try:
-                    status = get_action_status(inference.action_id)
-                    if status:
-                        inference.status = status.name
-                except Exception as e:
-                    logger.error(f'Error getting action status: {e}. ')
-                finally:
-                    inference.trigger_get_status = False
-
-        # TODO: get back to this when I have sample and image schema + parser
-        # if self.triggered_inferences:
-        #     for inference in self.triggered_inferences:
-        #         if (
-        #             self.trigger_get_statuses or inference.trigger_get_status
-        #         ) and inference.status == 'COMPLETED':
-        #             # search for the result to link to outputs
-        #             result_entry_id = None
-        #             for entry in Entry.objects(upload_id=archive.metadata.upload_id):
-        #                 if entry.mainfile == mainfile:
-        #                     result_entry_id = entry.entry_id
-        #             if result_entry_id is None:
-        #                 logger.warning('the output file was not found.')
-        #             f'../uploads/{archive.metadata.upload_id}/archive/{result_entry_id}#/data'
-
-        self.trigger_get_statuses = False
+        self.check_results(logger=logger)
 
 
 m_package.__init_metainfo__()

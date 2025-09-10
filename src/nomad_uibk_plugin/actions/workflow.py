@@ -39,7 +39,7 @@ class InferenceWorkflow:
         result_from_csv.user_id = data.user_id
         result_from_csv.upload_id = data.upload_id
         result_from_csv.triggering_entry_id = data.triggering_entry_id
-        await workflow.execute_activity(
+        result_reference = await workflow.execute_activity(
             write_to_archive,
             result_from_csv,
             start_to_close_timeout=timedelta(seconds=60),
@@ -47,3 +47,4 @@ class InferenceWorkflow:
                 maximum_attempts=5,
             ),
         )
+        return result_reference

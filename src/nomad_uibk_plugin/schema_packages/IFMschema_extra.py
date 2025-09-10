@@ -131,7 +131,9 @@ class IFMMeasurement(ELNMeasurement):
 
         # find corresponding data files
         bmp_name = re.sub(r'\.archive\.json$', '', archive.metadata.mainfile) + '.bmp'
-        xml_name = re.sub(r'\.archive\.json$', '', archive.metadata.mainfile) + '_info.xml'
+        xml_name = (
+            re.sub(r'\.archive\.json$', '', archive.metadata.mainfile) + '_info.xml'
+        )
 
         from nomad.processing.data import Entry
 
@@ -175,11 +177,11 @@ class IFMModel(Entity, EntryData):
         categories=[UIBKCategory],
         label='IFM Model',
         a_template=dict(
-            measurement_identifiers=dict(),
+            model_identifiers=dict(),
         ),
     )
 
-    measurement_identifiers = SubSection(
+    model_identifiers = SubSection(
         section_def=ReadableIdentifiers,
     )
 
@@ -212,7 +214,9 @@ class IFMModel(Entity, EntryData):
         self.method = 'IFM Model'
 
         # find corresponding data files
-        source_name = re.sub(r'\.archive\.json$', '', archive.metadata.mainfile) + '.keras'
+        source_name = (
+            re.sub(r'\.archive\.json$', '', archive.metadata.mainfile) + '.keras'
+        )
 
         from nomad.processing.data import Entry
 
@@ -228,5 +232,6 @@ class IFMModel(Entity, EntryData):
             with archive.m_context.raw_file(self.file, 'rb') as file:
                 model = read_keras_metadata(file, archive, logger)
                 merge_sections(self, model, logger)
+
 
 m_package.__init_metainfo__()

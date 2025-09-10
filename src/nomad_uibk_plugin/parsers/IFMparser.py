@@ -41,31 +41,21 @@ class IFMParser(MatchingParser):
         archive: 'EntryArchive',
         logger: 'BoundLogger',
     ) -> None:
-        print('1')
         logger.info('IFMParser.parse')
         data_file = mainfile.split('/')[-1]
         entry = IFMMeasurement.m_from_dict(IFMMeasurement.m_def.a_template)
-        # entry.data_file = data_file
-        file_str = "".join(data_file.split(".")[:-1])
-        if data_file.split(".")[-1] == 'bmp':
-            print('2')
+        file_str = ''.join(data_file.split('.')[:-1])
+        if data_file.split('.')[-1] == 'bmp':
             file_name = f'{file_str}.archive.json'
         else:
-            print('3')
             file_str = re.sub(r'_info$', '', file_str)
             file_name = f'{file_str}.archive.json'
-        # entry.image_file = data_file
-        # archive.data = ElnParserRawFile()
         create_archive(
             entity=entry,
             archive=archive,
             file_name=file_name,
             overwrite=True,
         )
-        # archive.data = RawFileIFMMeasData(
-        #     measurement = create_archive(entry, archive, file_name)
-        # )
-        # archive.metadata.entry_name = f'{data_file} data file'
 
 
 class IFMModelParser(MatchingParser):
@@ -79,29 +69,14 @@ class IFMModelParser(MatchingParser):
         archive: 'EntryArchive',
         logger: 'BoundLogger',
     ) -> None:
-        print('m1')
         logger.info('IFMModelParser.parse')
         data_file = mainfile.split('/')[-1]
         entry = IFMModel.m_from_dict(IFMModel.m_def.a_template)
-        # entry.data_file = data_file
-        file_str = "".join(data_file.split(".")[:-1])
+        file_str = ''.join(data_file.split('.')[:-1])
         file_name = f'{file_str}.archive.json'
-        # if data_file.endswith('_binary.keras'):
-        #     print('m2')
-        #     file_name = f'{file_str}.archive.json'
-        # else:
-        #     print('m3')
-        #     file_str = re.sub(r'_info$', '', file_str)
-        #     file_name = f'{file_str}.archive.json'
-        # entry.image_file = data_file
-        # archive.data = ElnParserRawFile()
         create_archive(
             entity=entry,
             archive=archive,
             file_name=file_name,
             overwrite=True,
         )
-        # archive.data = RawFileIFMMeasData(
-        #     measurement = create_archive(entry, archive, file_name)
-        # )
-        # archive.metadata.entry_name = f'{data_file} data file'

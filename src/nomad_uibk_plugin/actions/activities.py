@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import time
 
 import pandas as pd
 import plotly.graph_objs as go
@@ -146,30 +147,22 @@ async def write_to_archive(result_from_csv: CSVReadOutput):
     )
 
     # find entry_id for the resulting new entry
-    # for entry in Entry.objects(upload_id=upload.upload_id): # type: ignore
-    #     if entry.mainfile == fname:
-    #         result_entry_id = entry.entry_id
-    # result_entry_reference = f'../uploads/{upload.upload_id}/archive/{result_entry_id}'
+    entry_found = False
+    num_max_attempts = 20
+    for i in range(num_max_attempts):
+        for entry in Entry.objects(upload_id=upload.upload_id):  # type: ignore
+            if entry.mainfile == fname:
+                result_entry_id = entry.entry_id
+                entry_found = True
+        if entry_found:
+            break
+        time.sleep(0.1)
 
-    # print(f'resulting ref: {result_entry_reference}')
+    if entry_found:
+        result_entry_reference = (
+            f'../uploads/{upload.upload_id}/archive/{result_entry_id}#/data'
+        )
+    else:
+        result_entry_reference = None
 
-    # find entry that triggered this workflow
-    # triggering_entry = Entry.objects( # type: ignore
-    #     upload_id=upload.upload_id,
-    #     entry_id=result_from_csv.triggering_entry_id
-    # )[0]
-    # print(f'######### {triggering_entry}')
-    # for output in triggering_entry.data.outputs:
-    #     activity_info = activity.info()
-    #     if output.workflow_id == activity_info.workflow_id:
-    #         output.reference = result_entry_reference
-
-    # link the new entry to the IFMTwoStepAnalysis
-
-    # self.outputs.append(analysis_entry)     # change self to proper object
-    # archive.workflow2.outputs.append(
-    #     Link(
-    #         name='Extracted Features',
-    #         section=analysis_entry,
-    #     )
-    # )
+    return result_entry_reference
