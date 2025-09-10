@@ -210,7 +210,6 @@ class IFMModel(Entity, EntryData):
         """
         Read the model file and extract the metadata.
         """
-        super().normalize(archive, logger)
         self.method = 'IFM Model'
 
         # find corresponding data files
@@ -232,6 +231,8 @@ class IFMModel(Entity, EntryData):
             with archive.m_context.raw_file(self.file, 'rb') as file:
                 model = read_keras_metadata(file, archive, logger)
                 merge_sections(self, model, logger)
+
+        super().normalize(archive, logger)
 
 
 m_package.__init_metainfo__()

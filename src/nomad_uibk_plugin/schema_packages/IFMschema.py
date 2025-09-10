@@ -17,6 +17,7 @@
 #
 
 import os
+import re
 from typing import (
     TYPE_CHECKING,
 )
@@ -35,6 +36,7 @@ from nomad.datamodel.metainfo.eln import ELNAnalysis
 from nomad.datamodel.metainfo.plot import PlotSection
 from nomad.datamodel.metainfo.workflow import Link
 from nomad.metainfo import Quantity, SchemaPackage, Section, SubSection
+from nomad.processing.data import Entry
 from pint import UnitRegistry
 
 from nomad_uibk_plugin.actions.shared import InferenceInput
@@ -280,6 +282,20 @@ class IFMTwoStepAnalysis(ELNAnalysis):
 
         self.trigger_get_statuses = False
 
+    def find_source_path_from_ref(self, input_ref_subsection, extension):
+        ref = input_ref_subsection.m_to_dict()['reference']
+        upload_id = (re.search(r'uploads/(.*?)/archive', ref)).group(1)
+        entry_id = (re.search(r'archive/(.*?)#/data', ref)).group(1)
+        for entry in Entry.objects(upload_id=upload_id):  # type: ignore
+            if entry.entry_id == entry_id:
+                source_name = re.sub(r'\.archive\.json$', extension, entry.mainfile)
+                source_path = (
+                    f'.volumes/fs/staging/{upload_id[0:2]}/{upload_id}'
+                    + f'/raw/{source_name}'
+                )
+                break
+        return source_path
+
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):  # noqa: PLR0912
         super().normalize(archive, logger)
         self.method = 'IFM Two Step Analysis'
@@ -305,23 +321,20 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                 # remove subsections corresponding to previous runs
                 self.triggered_inferences = []
                 self.outputs = []
+                binary_source_path = self.find_source_path_from_ref(
+                    self.model_binary, '.keras'
+                )
+                classification_source_path = self.find_source_path_from_ref(
+                    self.model_classification, '.keras'
+                )
                 for input in self.inputs:
                     # Execute action that runs Georgs code to extract the defects
                     # and creates results entries
 
-                    image_file = archive.m_context.raw_file(input.reference.image_file)
-                    image_file_name = image_file.name
-                    model_binary = archive.m_context.raw_file(
-                        self.model_binary.reference.file
-                    )
-                    model_binary_name = model_binary.name
-                    model_classiciation = archive.m_context.raw_file(
-                        self.model_classification.reference.file
-                    )
-                    model_classiciation_name = model_classiciation.name
+                    image_source_path = self.find_source_path_from_ref(input, '.bmp')
 
                     # create paths and names for the csv file and archive file
-                    path, filename_with_ext = os.path.split(image_file_name)
+                    path, filename_with_ext = os.path.split(image_source_path)
                     filename, ext = os.path.splitext(filename_with_ext)
                     csv_path = os.path.join(path, f'{filename}_prediction.csv')
 
@@ -331,9 +344,9 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                             upload_id=archive.metadata.upload_id,
                             user_id=archive.metadata.authors[0].user_id,
                             triggering_entry_id=archive.metadata.entry_id,
-                            image_file_name=image_file_name,
-                            model_binary_name=model_binary_name,
-                            model_classification_name=model_classiciation_name,
+                            image_file_name=image_source_path,
+                            model_binary_name=binary_source_path,
+                            model_classification_name=classification_source_path,
                             csv_path=csv_path,
                             overwrite_existing_results=self.overwrite_existing_results,
                         )
