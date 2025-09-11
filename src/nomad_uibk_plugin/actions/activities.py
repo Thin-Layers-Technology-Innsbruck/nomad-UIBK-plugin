@@ -78,12 +78,9 @@ async def write_to_archive(result_from_csv: CSVReadOutput):
 
     relative_share = pd.read_json(result_from_csv.relative_share_json, orient='table')
     relative_share_series = relative_share['proportion']
-    defect_prevalence = DefectPrevalence(
-        whiskers=relative_share_series.get('Whiskers', 0.0),
-        chipping=relative_share_series.get('Chipping', 0.0),
-        scratch=relative_share_series.get('Scratch', 0.0),
-        no_error=relative_share_series.get('No Error', 0.0),
-    )
+    defect_prevalence=[]
+    for key, value in relative_share_series.items():
+        defect_prevalence.append(DefectPrevalence(name=key, prevalence=value))
 
     # create defects figure
     defect_data = pd.read_json(result_from_csv.defect_data_json, orient='table')

@@ -58,30 +58,17 @@ m_package = SchemaPackage()
 
 
 class DefectPrevalence(ArchiveSection):
-    whiskers = Quantity(
-        type=float,
-        description='Prevalence of whiskers.',
+    name = Quantity(
+        type=str,
+        description='Type of defect',
     )
-    chipping = Quantity(
+    prevalence = Quantity(
         type=float,
-        description='Prevalence of chipping.',
-    )
-    scratch = Quantity(
-        type=float,
-        description='Prevalence of scratches.',
-    )
-    no_error = Quantity(
-        type=float,
-        description='Prevalence of no errors.',
+        description='Prevalence of a given type of defect'
     )
 
 
 class IFMTwoStepAnalysisResult(Entity, PlotSection, EntryData):
-    # m_def = Section(
-    #     categories=[UIBKCategory],
-    #     label='IFM Two Step Analysis Result',
-    # )
-
     file = Quantity(
         type=str,
         description='File containing the data.',
@@ -91,6 +78,7 @@ class IFMTwoStepAnalysisResult(Entity, PlotSection, EntryData):
     defect_prevalence = SubSection(
         section_def=DefectPrevalence,
         description='Prevalence of defects in the image.',
+        repeats=True,
     )
 
     action_id = Quantity(
