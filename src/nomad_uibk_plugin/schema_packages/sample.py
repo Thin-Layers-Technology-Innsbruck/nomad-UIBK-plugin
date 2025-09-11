@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 import plotly.graph_objects as go
+from structlog.stdlib import BoundLogger
 from nomad.datamodel.data import (
     ArchiveSection,
     EntryData,
@@ -66,12 +67,18 @@ class MicroCellArray(ArchiveSection):
     cells = SubSection(section_def=MicroCell, label='MicroCells', repeats=True)
 
 
-class UIBKSample(CompositeSystem, EntryData, PlotSection):
+class UIBKSample(CompositeSystem, EntryData):
     m_def = Section(
         categories=[UIBKCategory],
         label='UIBK Sample',
     )
 
+    def normalize(self, archive, logger: BoundLogger):
+        super().normalize(archive, logger)
+        archive.metadata.entry_name = self.name
+
+
+class UIBKSampleWithArray(UIBKSample, PlotSection):
     array_generator = SubSection(
         section_def=ArrayGenerator,
         label='Array Generator',

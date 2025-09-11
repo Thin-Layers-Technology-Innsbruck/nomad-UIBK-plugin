@@ -11,7 +11,6 @@ from ifm_image_defect_detection.defectRecognition_toCSV import (
 from nomad.app.v1.routers.uploads import get_upload_with_read_access
 from nomad.datamodel import User
 from nomad.datamodel.metainfo.plot import PlotlyFigure
-from nomad.infrastructure import setup_mongo
 from nomad.processing.data import Entry
 from temporalio import activity
 
@@ -69,7 +68,6 @@ async def read_file(csv_path: str):
 
 @activity.defn
 async def write_to_archive(result_from_csv: CSVReadOutput):
-    setup_mongo()
     upload = get_upload_with_read_access(
         result_from_csv.upload_id,
         User(user_id=result_from_csv.user_id),

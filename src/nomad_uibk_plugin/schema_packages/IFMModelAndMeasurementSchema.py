@@ -33,11 +33,12 @@ from nomad.datamodel.metainfo.basesections import (
 )
 from nomad.datamodel.metainfo.eln import ELNMeasurement
 from nomad.metainfo import Datetime, MEnum, Quantity, SchemaPackage, Section, SubSection
-from nomad_measurements.utils import merge_sections
+from nomad.search import MetadataPagination, search
+from nomad_measurements.utils import create_archive, merge_sections
 from pint import UnitRegistry
 
 from nomad_uibk_plugin.schema_packages import UIBKCategory
-from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
+from nomad_uibk_plugin.schema_packages.sample import UIBKSample, UIBKSampleReference
 
 if TYPE_CHECKING:
     from nomad.datamodel import EntryArchive
@@ -154,17 +155,54 @@ class IFMMeasurement(ELNMeasurement):
 
         # Update sample references
         if self.sample_id and not self.samples:
+            query = {'results.eln.lab_ids': self.sample_id}
+            search_result = search(
+                owner='all',
+                query=query,
+                pagination=MetadataPagination(page_size=1),
+                user_id=archive.metadata.main_author.user_id,
+            )
+            if search_result.pagination.total == 0:
+                new_sample = UIBKSample(lab_id=self.sample_id)
+                sample_file_name = f'Sample_{self.sample_id}.archive.json'
+                sample_ref = create_archive(
+                    entity=new_sample,
+                    archive=archive,
+                    file_name=sample_file_name,
+                    overwrite=False,
+                )
+            else:
+                entry_id = search_result.data[0]['entry_id']
+                upload_id = search_result.data[0]['upload_id']
+                sample_ref = f'../uploads/{upload_id}/archive/{entry_id}#data'
+                try:
+                    sample_file_name = search_result.data[0]['results']['eln']['names'][
+                        0
+                    ]
+                except Exception as e:
+                    sample_file_name = self.sample_id
+                    logger.warn(f'Found no sample name, using sample id instead: {e}')
+                if search_result.pagination.total > 1:
+                    logger.warn(
+                        f'Found {search_result.pagination.total} entries with lab_id: '
+                        f'"{self.sample_id}". Will use the first one found.'
+                    )
             self.samples = [
-                UIBKSampleReference(name=self.sample_id, lab_id=self.sample_id)
+                UIBKSampleReference(
+                    name=sample_file_name,
+                    reference=sample_ref,
+                    lab_id=self.sample_id,
+                )
             ]
         elif self.samples and not self.sample_id:
             self.sample_id = self.samples[0].lab_id
 
         # Update measurement name
-        if self.samples:
-            self.name = f'IFM Measurement of {self.samples[0].name}'
+        # if self.samples:
+        #     self.name = f'IFM Measurement of {self.samples[0].name}'
 
         super().normalize(archive, logger)
+        archive.metadata.entry_name = self.name
 
 
 class IFMModel(Entity, EntryData):

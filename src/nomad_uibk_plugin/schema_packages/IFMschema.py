@@ -46,8 +46,6 @@ from nomad_uibk_plugin.schema_packages.IFMModelAndMeasurementSchema import (
     IFMModelReference,
 )
 
-# from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
-
 if TYPE_CHECKING:
     from nomad.datamodel import EntryArchive
     from structlog.stdlib import BoundLogger
