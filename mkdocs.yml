@@ -2,11 +2,11 @@ site_name: nomad-uibk-plugin
 site_description: UIBK schema and parser collection for NOMAD plattform.
 site_author: Fabian Schöppach
 
-repo_url: https://github.com/fabianschoeppach/nomad-uibk-plugin
+repo_url: https://github.com/Thin-Layers-Technology-Innsbruck/nomad-UIBK-plugin
 
 nav:
   - Home: index.md
-  - Tutorial: 
+  - Tutorial:
       - IFM Tutorial: tutorial/tutorial_ifm.md
   - How-to guides:
       - Install this Plugin: how_to/install_this_plugin.md
