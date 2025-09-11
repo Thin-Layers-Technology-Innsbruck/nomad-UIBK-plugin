@@ -1,7 +1,7 @@
 {
   "data": {
-	"m_def": "nomad_uibk_plugin.schema_packages.IFMschema_extra.IFMModel",
-	"name": "Binary Model",
+	"m_def": "nomad_uibk_plugin.schema_packages.IFMModelAndMeasurementSchema.IFMModel",
+	"name": "Binary IFM Model",
 	"datetime": "2025-02-03T10:12:42.347400+00:00",
 	"file": "Model_20241229_binary.keras"
   }

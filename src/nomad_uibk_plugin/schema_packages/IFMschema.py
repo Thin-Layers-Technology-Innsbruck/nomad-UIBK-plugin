@@ -41,7 +41,10 @@ from pint import UnitRegistry
 
 from nomad_uibk_plugin.actions.shared import InferenceInput
 from nomad_uibk_plugin.schema_packages import UIBKCategory
-from nomad_uibk_plugin.schema_packages.IFMschema_extra import IFMMeasurement, IFMModel
+from nomad_uibk_plugin.schema_packages.IFMModelAndMeasurementSchema import (
+    IFMMeasurementReference,
+    IFMModelReference,
+)
 
 # from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
 
@@ -74,10 +77,10 @@ class DefectPrevalence(ArchiveSection):
 
 
 class IFMTwoStepAnalysisResult(Entity, PlotSection, EntryData):
-    m_def = Section(
-        categories=[UIBKCategory],
-        label='IFM Two Step Analysis Result',
-    )
+    # m_def = Section(
+    #     categories=[UIBKCategory],
+    #     label='IFM Two Step Analysis Result',
+    # )
 
     file = Quantity(
         type=str,
@@ -97,42 +100,6 @@ class IFMTwoStepAnalysisResult(Entity, PlotSection, EntryData):
 
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
         super().normalize(archive, logger)
-
-
-class ImageReference(EntityReference):
-    reference = Quantity(
-        type=IFMMeasurement,
-        description='Reference to the IFM measurement.',
-        a_eln=ELNAnnotation(
-            component='ReferenceEditQuantity',
-            label='section reference',
-        ),
-    )
-
-    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
-        super().normalize(archive, logger)
-
-        # Update name
-        if self.reference and self.name is None:
-            self.name = self.reference.name
-
-
-class ModelReference(EntityReference):
-    reference = Quantity(
-        type=IFMModel,
-        description='Reference to the IFM model.',
-        a_eln=ELNAnnotation(
-            component='ReferenceEditQuantity',
-            label='section reference',
-        ),
-    )
-
-    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
-        super().normalize(archive, logger)
-
-        # Update name
-        if self.reference and self.name is None:
-            self.name = self.reference.name
 
 
 class IFMTwoStepAnalysisResultReference(EntityReference):
@@ -205,7 +172,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
     )
 
     inputs = SubSection(
-        section_def=ImageReference,
+        section_def=IFMMeasurementReference,
         description='Input data for the automated image analysis.',
         repeats=True,
     )
@@ -215,11 +182,11 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         repeats=True,
     )
     model_binary = SubSection(
-        section_def=ModelReference,
+        section_def=IFMModelReference,
         description='Model for the automated image analysis.',
     )
     model_classification = SubSection(
-        section_def=ModelReference,
+        section_def=IFMModelReference,
         description='Model for the automated image analysis.',
     )
 

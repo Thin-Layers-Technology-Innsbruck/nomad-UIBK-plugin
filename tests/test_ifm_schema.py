@@ -1,6 +1,7 @@
 import os.path
 
 from nomad.client import normalize_all, parse
+from nomad.infrastructure import setup_mongo
 
 from nomad_uibk_plugin.schema_packages.IFMschema import ureg
 
@@ -13,7 +14,7 @@ def test_IFMMeasurement():
     normalize_all(entry_archive)
 
     # assert entry_archive.data.m_def == \
-    # 'nomad_uibk_plugin.schema_packages.IFMschema.IFMMeasurement'
+    # 'nomad_uibk_plugin.schema_packages.IFMModelAndMeasurementSchema.IFMMeasurement'
     assert entry_archive.data.method == 'IFM Measurement'
     assert entry_archive.data.image_file == 'IFM_Sample.bmp'
     assert entry_archive.data.metadata_file == 'IFM_Sample_1_info.xml'
@@ -28,6 +29,7 @@ def test_IFMModel():
     test_file = os.path.join(
         os.path.dirname(__file__), 'data', 'test_IFMModel.archive.json'
     )
+    setup_mongo()       # should not be needed, strange!
     entry_archive = parse(test_file)[0]
     normalize_all(entry_archive)
 

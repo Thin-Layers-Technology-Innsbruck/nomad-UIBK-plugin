@@ -33,7 +33,7 @@ dependencies = [
     ]
 
 [project.urls]
-Repository = "https://github.com/fabianschoeppach/nomad-uibk-plugin"
+Repository = "https://github.com/Thin-Layers-Technology-Innsbruck/nomad-uibk-plugin"
 
 [tool.uv]
 index-url = "https://gitlab.mpcdf.mpg.de/api/v4/projects/2187/packages/pypi/simple"

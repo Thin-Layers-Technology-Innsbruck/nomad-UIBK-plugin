@@ -26,15 +26,14 @@ from nomad.datamodel.metainfo.annotations import (
     ELNAnnotation,
     ELNComponentEnum,
 )
-from nomad.datamodel.metainfo.basesections import Entity, ReadableIdentifiers
+from nomad.datamodel.metainfo.basesections import (
+    Entity,
+    EntityReference,
+    ReadableIdentifiers,
+)
 from nomad.datamodel.metainfo.eln import ELNMeasurement
 from nomad.metainfo import Datetime, MEnum, Quantity, SchemaPackage, Section, SubSection
-from nomad_measurements.utils import (
-    # create_archive,
-    # get_entry_id_from_file_name,
-    # get_reference,
-    merge_sections,
-)
+from nomad_measurements.utils import merge_sections
 from pint import UnitRegistry
 
 from nomad_uibk_plugin.schema_packages import UIBKCategory
@@ -233,6 +232,42 @@ class IFMModel(Entity, EntryData):
                 merge_sections(self, model, logger)
 
         super().normalize(archive, logger)
+
+
+class IFMMeasurementReference(EntityReference):
+    reference = Quantity(
+        type=IFMMeasurement,
+        description='Reference to the IFM measurement.',
+        a_eln=ELNAnnotation(
+            component='ReferenceEditQuantity',
+            label='section reference',
+        ),
+    )
+
+    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+        super().normalize(archive, logger)
+
+        # Update name
+        if self.reference and self.name is None:
+            self.name = self.reference.name
+
+
+class IFMModelReference(EntityReference):
+    reference = Quantity(
+        type=IFMModel,
+        description='Reference to the IFM model.',
+        a_eln=ELNAnnotation(
+            component='ReferenceEditQuantity',
+            label='section reference',
+        ),
+    )
+
+    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+        super().normalize(archive, logger)
+
+        # Update name
+        if self.reference and self.name is None:
+            self.name = self.reference.name
 
 
 m_package.__init_metainfo__()

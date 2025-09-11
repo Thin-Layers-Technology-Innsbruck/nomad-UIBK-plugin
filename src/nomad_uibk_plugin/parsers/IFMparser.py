@@ -8,7 +8,10 @@ from nomad.metainfo import Quantity
 from nomad.parsing.parser import MatchingParser
 from nomad_measurements.utils import create_archive
 
-from nomad_uibk_plugin.schema_packages.IFMschema_extra import IFMMeasurement, IFMModel
+from nomad_uibk_plugin.schema_packages.IFMModelAndMeasurementSchema import (
+    IFMMeasurement,
+    IFMModel,
+)
 
 if TYPE_CHECKING:
     from nomad.datamodel.datamodel import EntryArchive
