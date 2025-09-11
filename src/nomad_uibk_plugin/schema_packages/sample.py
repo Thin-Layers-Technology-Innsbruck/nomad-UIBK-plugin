@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING
 
 import plotly.graph_objects as go
-from structlog.stdlib import BoundLogger
 from nomad.datamodel.data import (
     ArchiveSection,
     EntryData,
@@ -73,7 +72,7 @@ class UIBKSample(CompositeSystem, EntryData):
         label='UIBK Sample',
     )
 
-    def normalize(self, archive, logger: BoundLogger):
+    def normalize(self, archive, logger: 'BoundLogger'):
         super().normalize(archive, logger)
         archive.metadata.entry_name = self.name
 
