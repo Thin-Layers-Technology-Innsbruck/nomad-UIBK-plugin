@@ -78,7 +78,7 @@ async def write_to_archive(result_from_csv: CSVReadOutput):
 
     relative_share = pd.read_json(result_from_csv.relative_share_json, orient='table')
     relative_share_series = relative_share['proportion']
-    defect_prevalence=[]
+    defect_prevalence = []
     for key, value in relative_share_series.items():
         defect_prevalence.append(DefectPrevalence(name=key, prevalence=value))
 

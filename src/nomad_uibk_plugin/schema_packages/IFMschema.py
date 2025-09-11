@@ -64,7 +64,7 @@ class DefectPrevalence(ArchiveSection):
     )
     prevalence = Quantity(
         type=float,
-        description='Prevalence of a given type of defect'
+        description='Prevalence of a given type of defect',
     )
 
 
