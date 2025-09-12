@@ -207,8 +207,8 @@ class IFMMeasurement(ELNMeasurement):
                         )
                     if search_result.pagination.total > 1:
                         logger.warn(
-                            f'Found {search_result.pagination.total} entries with lab_id: '
-                            f'"{sample.lab_id}". Will use the first one found.'
+                            f'Found {search_result.pagination.total} entries with '
+                            f'lab_id: "{sample.lab_id}". Will use the first one found.'
                         )
                 sample.name = sample_file_name
                 sample.reference = sample_ref
