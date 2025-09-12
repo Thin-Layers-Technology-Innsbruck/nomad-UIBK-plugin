@@ -27,6 +27,7 @@ from nomad.datamodel.data import ArchiveSection, EntryData
 from nomad.datamodel.metainfo.annotations import (
     ELNAnnotation,
     ELNComponentEnum,
+    SectionProperties,
 )
 from nomad.datamodel.metainfo.basesections import (
     Entity,
@@ -45,6 +46,7 @@ from nomad_uibk_plugin.schema_packages.IFMModelAndMeasurementSchema import (
     IFMMeasurementReference,
     IFMModelReference,
 )
+from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
 
 if TYPE_CHECKING:
     from nomad.datamodel import EntryArchive
@@ -67,10 +69,35 @@ class DefectPrevalence(ArchiveSection):
 
 
 class IFMTwoStepAnalysisResult(Entity, PlotSection, EntryData):
+    m_def = Section(
+        a_eln=ELNAnnotation(
+            properties=SectionProperties(
+                order=[
+                    'name',
+                    'file',
+                    'description',
+                    'datetime',
+                    'lab_id',
+                    'action_id',
+                    'figures',
+                    'sample',
+                    'defect_prevalence',
+                ]
+            )
+        ),
+    )
+
     file = Quantity(
         type=str,
         description='File containing the data.',
         a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
+    )
+
+    sample = SubSection(
+        section_def=UIBKSampleReference,
+        description="""
+        A list of all the samples measured during the measurement.
+        """,
     )
 
     defect_prevalence = SubSection(
@@ -155,6 +182,29 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         categories=[UIBKCategory],
         label='IFM Two Step Analysis',
         description='Form to run IFM inference actions from the ELN interface.',
+        a_eln=ELNAnnotation(
+            properties=SectionProperties(
+                order=[
+                    'name',
+                    'datetime',
+                    'overwrite_existing_results',
+                    'trigger_run_action',
+                    'trigger_get_statuses',
+                    'description',
+                    'lab_id',
+                    'location',
+                    'tags',
+                    'method',
+                    'inputs',
+                    'model_binary',
+                    'model_classification',
+                    'steps',
+                    'analysis_identifiers',
+                    'triggered_inferences',
+                    'outputs',
+                ]
+            )
+        ),
     )
 
     inputs = SubSection(
@@ -297,6 +347,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                             upload_id=archive.metadata.upload_id,
                             user_id=archive.metadata.authors[0].user_id,
                             triggering_entry_id=archive.metadata.entry_id,
+                            sample_id=input.reference.sample_id,
                             image_file_name=image_source_path,
                             model_binary_name=binary_source_path,
                             model_classification_name=classification_source_path,

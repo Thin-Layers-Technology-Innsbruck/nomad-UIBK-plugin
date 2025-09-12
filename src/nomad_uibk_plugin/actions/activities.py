@@ -22,6 +22,7 @@ from nomad_uibk_plugin.schema_packages.IFMschema import (
     DefectPrevalence,
     IFMTwoStepAnalysisResult,
 )
+from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
 
 
 @activity.defn
@@ -58,6 +59,7 @@ async def read_file(csv_path: str):
             upload_id='',
             user_id='',
             triggering_entry_id='',
+            sample_id='',
             csv_path=csv_path,
             defect_columns=defect_columns,
             defect_data_json=defect_data_json,
@@ -119,6 +121,7 @@ async def write_to_archive(result_from_csv: CSVReadOutput):
         file=result_from_csv.csv_path,
         defect_prevalence=defect_prevalence,
         action_id=activity_info.workflow_id,
+        sample=UIBKSampleReference(lab_id=result_from_csv.sample_id),
         figures=[
             PlotlyFigure(
                 label='Defect Distribution Heatmap',

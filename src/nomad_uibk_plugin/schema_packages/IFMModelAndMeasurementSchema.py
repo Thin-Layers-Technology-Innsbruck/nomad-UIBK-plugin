@@ -25,6 +25,7 @@ from nomad.datamodel.data import EntryData
 from nomad.datamodel.metainfo.annotations import (
     ELNAnnotation,
     ELNComponentEnum,
+    SectionProperties,
 )
 from nomad.datamodel.metainfo.basesections import (
     Entity,
@@ -60,6 +61,30 @@ class IFMMeasurement(ELNMeasurement):
         a_template=dict(
             measurement_identifiers=dict(),
         ),
+        a_eln=ELNAnnotation(
+            properties=SectionProperties(
+                order=[
+                    'name',
+                    'image_file',
+                    'metadata_file',
+                    'start_time',
+                    'end_time',
+                    'description',
+                    'location',
+                    'lab_id',
+                    'datetime',
+                    'tags',
+                    'method',
+                    'exposure_time',
+                    'magnification',
+                    'instruments',
+                    'samples',
+                    'measurement_identifiers',
+                    'steps',
+                    'results',
+                ],
+            ),
+        ),
     )
 
     image_file = Quantity(
@@ -82,24 +107,25 @@ class IFMMeasurement(ELNMeasurement):
         """,
         repeats=True,
     )
-    # TODO put this into samples subsection
-    sample_id = Quantity(
-        type=str,
-        description='ID of the sample measured.',
-        a_eln=ELNAnnotation(component=ELNComponentEnum.StringEditQuantity),
+
+    # Overwrite datetime with new label and description
+    datetime = Quantity(
+        type=Datetime,
+        desription='The date and time when this entry was last processed.',
+        a_eln=dict(label='entry processing time', component='DateTimeEditQuantity'),
     )
 
     # Metadata Quantities
     start_time = Quantity(
         type=Datetime,
-        description='The date and time when this process was started.',
-        a_eln=dict(label='start time'),  # component='DateTimeEditQuantity'
+        description='The date and time when this measurement was started.',
+        a_eln=dict(label='start time', component='DateTimeEditQuantity'),
     )
 
     end_time = Quantity(
         type=Datetime,
-        description='The date and time when this process was finished.',
-        a_eln=dict(label='end time'),
+        description='The date and time when this measurement was finished.',
+        a_eln=dict(label='end time', component='DateTimeEditQuantity'),
     )
 
     exposure_time = Quantity(
@@ -107,12 +133,6 @@ class IFMMeasurement(ELNMeasurement):
         description='Exposure time of the image.',
         unit='second',
         a_eln=ELNAnnotation(defaultDisplayUnit='µs'),
-    )
-
-    device = Quantity(
-        type=str,
-        description='Device used for the measurement.',
-        a_eln=dict(label='measurement device'),
     )
 
     magnification = Quantity(
@@ -154,52 +174,44 @@ class IFMMeasurement(ELNMeasurement):
                 merge_sections(self, measurement, logger)
 
         # Update sample references
-        if self.sample_id and not self.samples:
-            query = {'results.eln.lab_ids': self.sample_id}
-            search_result = search(
-                owner='all',
-                query=query,
-                pagination=MetadataPagination(page_size=1),
-                user_id=archive.metadata.main_author.user_id,
-            )
-            if search_result.pagination.total == 0:
-                new_sample = UIBKSample(lab_id=self.sample_id)
-                sample_file_name = f'Sample_{self.sample_id}.archive.json'
-                sample_ref = create_archive(
-                    entity=new_sample,
-                    archive=archive,
-                    file_name=sample_file_name,
-                    overwrite=False,
+        for sample in self.samples:
+            if sample.lab_id and not sample.reference:
+                query = {'results.eln.lab_ids': sample.lab_id}
+                search_result = search(
+                    owner='all',
+                    query=query,
+                    pagination=MetadataPagination(page_size=1),
+                    user_id=archive.metadata.main_author.user_id,
                 )
-            else:
-                entry_id = search_result.data[0]['entry_id']
-                upload_id = search_result.data[0]['upload_id']
-                sample_ref = f'../uploads/{upload_id}/archive/{entry_id}#data'
-                try:
-                    sample_file_name = search_result.data[0]['results']['eln']['names'][
-                        0
-                    ]
-                except Exception as e:
-                    sample_file_name = self.sample_id
-                    logger.warn(f'Found no sample name, using sample id instead: {e}')
-                if search_result.pagination.total > 1:
-                    logger.warn(
-                        f'Found {search_result.pagination.total} entries with lab_id: '
-                        f'"{self.sample_id}". Will use the first one found.'
+                if search_result.pagination.total == 0:
+                    new_sample = UIBKSample(lab_id=sample.lab_id)
+                    sample_file_name = f'Sample_{sample.lab_id}.archive.json'
+                    sample_ref = create_archive(
+                        entity=new_sample,
+                        archive=archive,
+                        file_name=sample_file_name,
+                        overwrite=False,
                     )
-            self.samples = [
-                UIBKSampleReference(
-                    name=sample_file_name,
-                    reference=sample_ref,
-                    lab_id=self.sample_id,
-                )
-            ]
-        elif self.samples and not self.sample_id:
-            self.sample_id = self.samples[0].lab_id
-
-        # Update measurement name
-        # if self.samples:
-        #     self.name = f'IFM Measurement of {self.samples[0].name}'
+                else:
+                    entry_id = search_result.data[0]['entry_id']
+                    upload_id = search_result.data[0]['upload_id']
+                    sample_ref = f'../uploads/{upload_id}/archive/{entry_id}#data'
+                    try:
+                        sample_file_name = search_result.data[0]['results']['eln'][
+                            'names'
+                        ][0]
+                    except Exception as e:
+                        sample_file_name = sample.lab_id
+                        logger.warn(
+                            f'Found no sample name, using sample id instead: {e}'
+                        )
+                    if search_result.pagination.total > 1:
+                        logger.warn(
+                            f'Found {search_result.pagination.total} entries with lab_id: '
+                            f'"{sample.lab_id}". Will use the first one found.'
+                        )
+                sample.name = sample_file_name
+                sample.reference = sample_ref
 
         super().normalize(archive, logger)
         archive.metadata.entry_name = self.name

@@ -59,10 +59,11 @@ def read_ifm_xml(
     # parse other XML fields
     sample_id = root.find('.//generalData/name').text
     if sample_id:
-        metadata['sample_id'] = sample_id
+        # metadata['sample_id'] = sample_id
+        metadata['samples'] = [{'lab_id': sample_id}]
     device = root.find('.//generalData/deviceName').text
     if device:
-        metadata['device'] = device
+        metadata['instruments'] = [{'name': device}]
     magnification = root.find('.//ifmData/magnification').text
     if magnification:
         metadata['magnification'] = float(magnification)
