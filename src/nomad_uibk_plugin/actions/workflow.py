@@ -5,13 +5,12 @@ from temporalio.common import RetryPolicy
 
 with workflow.unsafe.imports_passed_through():
     from nomad_uibk_plugin.actions.activities import (
-        read_file,
+        read_file_and_write_archive,
         run_ifm_inference,
-        write_to_archive,
     )
     from nomad_uibk_plugin.actions.shared import (
-        CSVReadOutput,
         InferenceInput,
+        WriteArchiveInput,
     )
 
 
@@ -27,25 +26,22 @@ class InferenceWorkflow:
                 maximum_attempts=5,
             ),
         )
-        result_from_csv_dict = await workflow.execute_activity(
-            read_file,
-            data.csv_path,
-            start_to_close_timeout=timedelta(seconds=60),
-            retry_policy=RetryPolicy(
-                maximum_attempts=5,
-            ),
+
+        input_for_writer = WriteArchiveInput(
+            csv_path=data.csv_path,
+            upload_id=data.upload_id,
+            user_id=data.user_id,
+            triggering_entry_id=data.triggering_entry_id,
+            sample_id=data.sample_id,
         )
-        result_from_csv = CSVReadOutput(**result_from_csv_dict)  # type: ignore
-        result_from_csv.user_id = data.user_id
-        result_from_csv.upload_id = data.upload_id
-        result_from_csv.triggering_entry_id = data.triggering_entry_id
-        result_from_csv.sample_id = data.sample_id
+
         result_reference = await workflow.execute_activity(
-            write_to_archive,
-            result_from_csv,
+            read_file_and_write_archive,
+            input_for_writer,
             start_to_close_timeout=timedelta(seconds=60),
             retry_policy=RetryPolicy(
                 maximum_attempts=5,
             ),
         )
+
         return result_reference

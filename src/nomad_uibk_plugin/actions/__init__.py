@@ -19,16 +19,15 @@ class IFMInferenceEntryPoint(ActionEntryPoint):
         from nomad.actions import Action
 
         from nomad_uibk_plugin.actions.activities import (
-            read_file,
+            read_file_and_write_archive,
             run_ifm_inference,
-            write_to_archive,
         )
         from nomad_uibk_plugin.actions.workflow import InferenceWorkflow
 
         return Action(
             task_queue=self.task_queue,
             workflow=InferenceWorkflow,
-            activities=[read_file, run_ifm_inference, write_to_archive],
+            activities=[read_file_and_write_archive, run_ifm_inference],
         )
 
 

@@ -15,8 +15,8 @@ from nomad.processing.data import Entry
 from temporalio import activity
 
 from nomad_uibk_plugin.actions.shared import (
-    CSVReadOutput,
     InferenceInput,
+    WriteArchiveInput,
 )
 from nomad_uibk_plugin.schema_packages.IFMschema import (
     DefectPrevalence,
@@ -37,11 +37,11 @@ async def run_ifm_inference(data: InferenceInput):
 
 
 @activity.defn
-async def read_file(csv_path: str):
-    if not os.path.exists(csv_path):
+async def read_file_and_write_archive(writer_input: WriteArchiveInput):
+    if not os.path.exists(writer_input.csv_path):
         raise FileExistsError('No csv file found.')
     else:
-        defect_data = pd.read_csv(csv_path, skiprows=2)
+        defect_data = pd.read_csv(writer_input.csv_path, skiprows=2)
         defect_columns = ['Whiskers', 'Chipping', 'Scratch', 'No Error']
         defect_data['type'] = defect_data[defect_columns].idxmax(axis=1)
         relative_share = defect_data['type'].value_counts(normalize=True)
@@ -52,38 +52,18 @@ async def read_file(csv_path: str):
             'No Error': 4,
         }
         defect_data['label'] = defect_data['type'].map(defect_mapping)
-        defect_data_json = defect_data.to_json(orient='table')
-        relative_share_json = relative_share.to_json(orient='table')
 
-        output = CSVReadOutput(
-            upload_id='',
-            user_id='',
-            triggering_entry_id='',
-            sample_id='',
-            csv_path=csv_path,
-            defect_columns=defect_columns,
-            defect_data_json=defect_data_json,
-            relative_share_json=relative_share_json,
-        )
-        return output
-
-
-@activity.defn
-async def write_to_archive(result_from_csv: CSVReadOutput):
     upload = get_upload_with_read_access(
-        result_from_csv.upload_id,
-        User(user_id=result_from_csv.user_id),
+        writer_input.upload_id,
+        User(user_id=writer_input.user_id),
         include_others=True,
     )
 
-    relative_share = pd.read_json(result_from_csv.relative_share_json, orient='table')
-    relative_share_series = relative_share['proportion']
     defect_prevalence = []
-    for key, value in relative_share_series.items():
+    for key, value in relative_share.items():
         defect_prevalence.append(DefectPrevalence(name=key, prevalence=value))
 
     # create defects figure
-    defect_data = pd.read_json(result_from_csv.defect_data_json, orient='table')
     heatmap = go.Heatmap(
         x=defect_data['x'],
         y=defect_data['y'],
@@ -91,7 +71,7 @@ async def write_to_archive(result_from_csv: CSVReadOutput):
         colorscale='Viridis',
         colorbar=dict(
             tickvals=[1, 2, 3, 4],
-            ticktext=result_from_csv.defect_columns,
+            ticktext=defect_columns,
             title='Defect Type',
         ),
     )
@@ -111,17 +91,17 @@ async def write_to_archive(result_from_csv: CSVReadOutput):
 
     # create a new archive entry with the results of the analysis
     result_name = (
-        re.sub(r'_prediction\.csv$', '', result_from_csv.csv_path.split('/')[-1])
+        re.sub(r'_prediction\.csv$', '', writer_input.csv_path.split('/')[-1])
         + '_inference_result'
     )
     activity_info = activity.info()
 
     result_entry = IFMTwoStepAnalysisResult(
         name=result_name,
-        file=result_from_csv.csv_path,
+        file=writer_input.csv_path,
         defect_prevalence=defect_prevalence,
         action_id=activity_info.workflow_id,
-        sample=UIBKSampleReference(lab_id=result_from_csv.sample_id),
+        sample=UIBKSampleReference(lab_id=writer_input.sample_id),
         figures=[
             PlotlyFigure(
                 label='Defect Distribution Heatmap',

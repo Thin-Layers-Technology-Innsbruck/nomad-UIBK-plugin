@@ -14,20 +14,10 @@ class InferenceInput:
     overwrite_existing_results: bool
 
 
-# @dataclass
-# class InferenceResultsInput:
-#     upload_id: str
-#     user_id: str
-#     model_data: InferenceInput
-
-
 @dataclass
-class CSVReadOutput:
+class WriteArchiveInput:
+    csv_path: str
     upload_id: str
     user_id: str
     triggering_entry_id: str
     sample_id: str
-    csv_path: str
-    defect_data_json: str
-    relative_share_json: str
-    defect_columns: list[str]
