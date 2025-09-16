@@ -331,6 +331,22 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                     self.model_classification, '.keras'
                 )
                 for input in self.inputs:
+                    # check that input has sample associated with it
+                    if not input.reference:
+                        logger.warning(
+                            f'Input reference is missing for input {input.name}.'
+                            + 'This input will be ignored.'
+                        )
+                        continue
+                    if (
+                        not input.reference.samples
+                        or not input.reference.samples[0].lab_id
+                    ):
+                        logger.warning(
+                            f'No sample found for input {input.name}.'
+                            + 'This input will be ignored.'
+                        )
+                        continue
                     # Execute action that runs Georgs code to extract the defects
                     # and creates results entries
 
@@ -371,8 +387,8 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                         )  # type: ignore
                     except Exception as e:
                         logger.error(f'Error running action: {e}')
-                    self.trigger_run_action = False
-                    self.overwrite_existing_results = False
+                self.trigger_run_action = False
+                self.overwrite_existing_results = False
 
         elif self.model_binary and self.model_classification:
             logger.warning(
