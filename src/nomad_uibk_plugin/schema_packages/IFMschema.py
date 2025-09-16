@@ -346,7 +346,6 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                         input_data = InferenceInput(
                             upload_id=archive.metadata.upload_id,
                             user_id=archive.metadata.authors[0].user_id,
-                            triggering_entry_id=archive.metadata.entry_id,
                             sample_id=input.reference.samples[0].lab_id,
                             image_file_name=image_source_path,
                             model_binary_name=binary_source_path,

@@ -5,7 +5,6 @@ from dataclasses import dataclass
 class InferenceInput:
     upload_id: str
     user_id: str
-    triggering_entry_id: str
     sample_id: str
     image_file_name: str
     model_binary_name: str
@@ -19,5 +18,4 @@ class WriteArchiveInput:
     csv_path: str
     upload_id: str
     user_id: str
-    triggering_entry_id: str
     sample_id: str

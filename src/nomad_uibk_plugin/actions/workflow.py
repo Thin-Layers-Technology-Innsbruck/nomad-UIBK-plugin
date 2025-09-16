@@ -31,7 +31,6 @@ class InferenceWorkflow:
             csv_path=data.csv_path,
             upload_id=data.upload_id,
             user_id=data.user_id,
-            triggering_entry_id=data.triggering_entry_id,
             sample_id=data.sample_id,
         )
 
