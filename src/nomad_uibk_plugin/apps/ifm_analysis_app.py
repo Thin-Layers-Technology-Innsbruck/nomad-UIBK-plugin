@@ -31,25 +31,25 @@ ifm_analysis_app = App(
             title='Sample ID',
         ),
         Column(
-            search_quantity=f'data.defect_prevalence[?name==\'No Error\'].prevalence#{schema}',  # noqa: E501
+            search_quantity=f"data.defect_prevalence[?name=='No Error'].prevalence#{schema}",  # noqa: E501
             selected=True,
             title='No defect - area fraction',
             format=Format(decimals=5, mode=ModeEnum.STANDARD),
         ),
         Column(
-            search_quantity=f'data.defect_prevalence[?name==\'Whiskers\'].prevalence#{schema}',  # noqa: E501
+            search_quantity=f"data.defect_prevalence[?name=='Whiskers'].prevalence#{schema}",  # noqa: E501
             selected=True,
             title='Whiskers - area fraction',
             format=Format(decimals=5, mode=ModeEnum.STANDARD),
         ),
         Column(
-            search_quantity=f'data.defect_prevalence[?name==\'Chipping\'].prevalence#{schema}',  # noqa: E501
+            search_quantity=f"data.defect_prevalence[?name=='Chipping'].prevalence#{schema}",  # noqa: E501
             selected=True,
             title='Chipping - area fraction',
             format=Format(decimals=5, mode=ModeEnum.STANDARD),
         ),
         Column(
-            search_quantity=f'data.defect_prevalence[?name==\'Scratch\'].prevalence#{schema}',  # noqa: E501
+            search_quantity=f"data.defect_prevalence[?name=='Scratch'].prevalence#{schema}",  # noqa: E501
             selected=True,
             title='Scratches - area fraction',
             format=Format(decimals=5, mode=ModeEnum.STANDARD),
