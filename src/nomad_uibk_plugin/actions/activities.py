@@ -116,15 +116,12 @@ async def read_file_and_write_archive(writer_input: WriteArchiveInput):
         raise FileExistsError('No csv file found.')
     else:
         defect_data = pd.read_csv(writer_input.csv_path, skiprows=2)
-        defect_columns = ['Whiskers', 'Chipping', 'Scratch', 'No Error']
+        defect_columns = defect_data.columns.to_list()
+        defect_columns.remove('x')
+        defect_columns.remove('y')
         defect_data['type'] = defect_data[defect_columns].idxmax(axis=1)
         relative_share = defect_data['type'].value_counts(normalize=True)
-        defect_mapping = {
-            'Whiskers': 1,
-            'Chipping': 2,
-            'Scratch': 3,
-            'No Error': 4,
-        }
+        defect_mapping = {key: idx for idx, key in enumerate(defect_columns, start=1)}
         defect_data['label'] = defect_data['type'].map(defect_mapping)
 
     upload = get_upload_with_read_access(
@@ -165,13 +162,13 @@ async def read_file_and_write_archive(writer_input: WriteArchiveInput):
 
     # create a new archive entry with the results of the analysis
     result_name = (
-        re.sub(r'_prediction\.csv$', '', writer_input.csv_path.split('/')[-1])
+        re.sub(r'_prediction\.csv$', '', writer_input.csv_path)
         + '_inference_result'
     )
     activity_info = activity.info()
 
     result_entry = IFMTwoStepAnalysisResult(
-        name=result_name,
+        name=result_name.split('/')[-1],
         file=writer_input.csv_path,
         defect_prevalence=defect_prevalence,
         action_id=activity_info.workflow_id,
@@ -187,6 +184,7 @@ async def read_file_and_write_archive(writer_input: WriteArchiveInput):
 
     # add the new entry to the upload
     fname = os.path.join(result_name + '.archive.json')
+    fname = "/archive/".join(fname.rsplit("/raw/", 1))
     with open(fname, 'w', encoding='utf-8') as f:
         json.dump({'data': result_entry.m_to_dict(with_root_def=True)}, f, indent=4)
     upload.process_upload(
@@ -203,7 +201,7 @@ async def read_file_and_write_archive(writer_input: WriteArchiveInput):
     num_max_attempts = 20
     for i in range(num_max_attempts):
         for entry in Entry.objects(upload_id=upload.upload_id):  # type: ignore
-            if entry.mainfile == fname:
+            if entry.mainfile == fname.split('/')[-1]:
                 result_entry_id = entry.entry_id
                 entry_found = True
         if entry_found:
