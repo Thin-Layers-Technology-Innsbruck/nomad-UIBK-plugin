@@ -16,7 +16,6 @@
 # limitations under the License.
 #
 
-import os
 import re
 from typing import (
     TYPE_CHECKING,
