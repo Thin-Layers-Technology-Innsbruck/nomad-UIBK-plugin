@@ -121,6 +121,8 @@ async def read_file_and_write_archive(writer_input: WriteArchiveInput):
         defect_columns.remove('y')
         defect_data['type'] = defect_data[defect_columns].idxmax(axis=1)
         relative_share = defect_data['type'].value_counts(normalize=True)
+        relative_share = relative_share.reindex(defect_columns, fill_value=0.0)
+        relative_share = relative_share.sort_values(ascending=False)
         defect_mapping = {key: idx for idx, key in enumerate(defect_columns, start=1)}
         defect_data['label'] = defect_data['type'].map(defect_mapping)
 
