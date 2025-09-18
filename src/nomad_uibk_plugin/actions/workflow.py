@@ -62,7 +62,7 @@ class InferenceWorkflow:
             upload_id=data.upload_id,
             user_id=data.user_id,
             sample_id=data.sample_id,
-            mask_input_images=data.mask_input_images
+            mask_input_images=data.mask_input_images,
         )
 
         result_reference = await workflow.execute_activity(
