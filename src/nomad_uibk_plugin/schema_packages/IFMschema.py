@@ -188,6 +188,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                     'name',
                     'datetime',
                     'overwrite_existing_results',
+                    'mask_input_images',
                     'trigger_run_action',
                     'trigger_get_statuses',
                     'description',
@@ -230,10 +231,20 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         type=bool,
         description=(
             'If checked, the existing inference results csv files will be overwritten.'
-            'Otherwise, only images without corresponding outputs will be processed,'
-            'processing for the other entries will be using existing files'
+            'Otherwise, only images without corresponding outputs will be processed '
+            'anew, processing for the other entries will be using existing files'
         ),
         default=False,
+        a_eln=ELNAnnotation(component=ELNComponentEnum.BoolEditQuantity),
+    )
+
+    mask_input_images = Quantity(
+        type=bool,
+        description=(
+            'If checked, attempt to mask the areas of the input image outside of '
+            'the actual sample. The masked image will be saved in the same upload.'
+        ),
+        default=True,
         a_eln=ELNAnnotation(component=ELNComponentEnum.BoolEditQuantity),
     )
 
@@ -352,11 +363,6 @@ class IFMTwoStepAnalysis(ELNAnalysis):
 
                     image_source_path = self.find_source_path_from_ref(input, '.bmp')
 
-                    # create paths and names for the csv file and archive file
-                    path, filename_with_ext = os.path.split(image_source_path)
-                    filename, ext = os.path.splitext(filename_with_ext)
-                    csv_path = os.path.join(path, f'{filename}_prediction.csv')
-
                     # run action with analysis
                     try:
                         input_data = InferenceInput(
@@ -366,8 +372,9 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                             image_file_name=image_source_path,
                             model_binary_name=binary_source_path,
                             model_classification_name=classification_source_path,
-                            csv_path=csv_path,
+                            csv_path='',  # filled later inside the workflow
                             overwrite_existing_results=self.overwrite_existing_results,
+                            mask_input_images=self.mask_input_images,
                         )
                         action_id = start_action(
                             action_id='nomad_uibk_plugin.actions:ifm_inference',
@@ -377,7 +384,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                         # create outputs (empty for now) and inference status for each
                         # input image
                         self.triggered_inferences.append(
-                            InferenceStatus(action_id=action_id)
+                            InferenceStatus(action_id=action_id, status='RUNNING')
                         )  # type: ignore
                         self.outputs.append(
                             IFMTwoStepAnalysisResultReference(

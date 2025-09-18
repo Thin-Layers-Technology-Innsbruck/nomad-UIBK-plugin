@@ -29,8 +29,11 @@ dependencies = [
     "nomad-lab>=1.3.4",
     "nomad-measurements>=1.3.0",
     "nomad-material-processing>=0.0.10",
-    "ifm-image-defect-detection @ git+https://github.com/csav1974/IFM-Image-Defect-Detection-and-Classification.git@pyproject-ready"
-    ]
+    "ifm-image-defect-detection @ git+https://github.com/csav1974/IFM-Image-Defect-Detection-and-Classification.git@pyproject-ready",
+    "pandas",
+    "scikit-image",
+    "plotly",
+]
 
 [project.urls]
 Repository = "https://github.com/Thin-Layers-Technology-Innsbruck/nomad-UIBK-plugin"

@@ -3,6 +3,8 @@ import os
 import re
 import time
 
+import imageio
+import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
 from ifm_image_defect_detection.defectRecognition_toCSV import (
@@ -12,10 +14,13 @@ from nomad.app.v1.routers.uploads import get_upload_with_read_access
 from nomad.datamodel import User
 from nomad.datamodel.metainfo.plot import PlotlyFigure
 from nomad.processing.data import Entry
+from skimage import color, feature, io, transform
+from skimage.transform import hough_circle, hough_circle_peaks
 from temporalio import activity
 
 from nomad_uibk_plugin.actions.shared import (
     InferenceInput,
+    MaskingInput,
     WriteArchiveInput,
 )
 from nomad_uibk_plugin.schema_packages.IFMschema import (
@@ -26,6 +31,75 @@ from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
 
 
 @activity.defn
+async def mask_image(masking_data: MaskingInput):
+    input_path = masking_data.input_path
+    if masking_data.mask_input_images:
+        index = input_path.rfind('/IFM_')
+        if index == -1:
+            activity.logger.warning('Incorrect path for input image for masking.')
+            return input_path
+        else:
+            output_path = input_path[: index + 1] + 'masked_' + input_path[index + 1 :]
+        if (not os.path.exists(output_path)) or masking_data.overwrite_existing_results:
+            resize_side = 500  # smaller side for rescaling
+            img = io.imread(input_path)
+            if img is None:
+                raise FileExistsError(f'Could not read {input_path}')
+            h, w = img.shape[:2]
+            # Reduce resolution and convert to grayscale for faster image analysis
+            scale = resize_side / min(h, w)
+            small_w, small_h = int(w * scale), int(h * scale)
+            small_img = transform.resize(
+                img,
+                (small_h, small_w),
+                anti_aliasing=False,
+                preserve_range=True,
+            ).astype(np.uint8)  # type: ignore
+            gray_small = color.rgb2gray(small_img)
+            # Edge detection
+            edges = feature.canny(gray_small, sigma=5)
+            # Expected radius of the useful circle
+            min_r = int(resize_side / 4)
+            max_r = int(resize_side / 2)
+            # Hough transform for circles
+            radii = np.arange(min_r, max_r, 1)
+            hough_res = hough_circle(edges, radii)
+            # Find several most prominent circles and take the innermost
+            _, cx, cy, radii_found = hough_circle_peaks(
+                hough_res, radii, total_num_peaks=5
+            )
+            if len(radii_found) == 0:
+                raise ValueError('No circles detected.')
+            index = np.argmin(radii_found)
+            x_s, y_s, r_s = cx[index], cy[index], radii_found[index]
+            # Scale back to full resolution; +1 due to different indexing of the images
+            scale_back = 1 / scale
+            x = int(round((x_s + 1) * scale_back))
+            y = int(round((y_s + 1) * scale_back))
+            r = int(round(r_s * scale_back))
+            # Create and apply the mask
+            Y_grid, X_grid = np.ogrid[:h, :w]
+            dist2 = (X_grid - x) ** 2 + (Y_grid - y) ** 2
+            mask = dist2 <= r**2
+            img[~mask] = 0
+            # Save the result
+            imageio.imwrite(output_path, img.astype(np.uint8))
+        else:
+            activity.logger.warning('Output file already exists and not overwritten.')
+        return output_path
+    else:
+        return input_path
+
+
+@activity.defn
+async def generate_csv_path(image_path: str):
+    path, filename_with_ext = os.path.split(image_path)
+    filename, _ = os.path.splitext(filename_with_ext)
+    csv_path = os.path.join(path, f'{filename}_prediction.csv')
+    return csv_path
+
+
+@activity.defn
 async def run_ifm_inference(data: InferenceInput):
     if (not os.path.exists(data.csv_path)) or data.overwrite_existing_results:
         activity.logger.info('Extracting defects...')
@@ -33,7 +107,7 @@ async def run_ifm_inference(data: InferenceInput):
             data.image_file_name, data.model_binary_name, data.model_classification_name
         )
     else:
-        activity.logger.warning('Output file already exists and not overwritten')
+        activity.logger.warning('Output file already exists and not overwritten.')
 
 
 @activity.defn

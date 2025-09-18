@@ -2,6 +2,13 @@ from dataclasses import dataclass
 
 
 @dataclass
+class MaskingInput:
+    input_path: str
+    overwrite_existing_results: bool
+    mask_input_images: bool
+
+
+@dataclass
 class InferenceInput:
     upload_id: str
     user_id: str
@@ -11,6 +18,7 @@ class InferenceInput:
     model_classification_name: str
     csv_path: str
     overwrite_existing_results: bool
+    mask_input_images: bool
 
 
 @dataclass
