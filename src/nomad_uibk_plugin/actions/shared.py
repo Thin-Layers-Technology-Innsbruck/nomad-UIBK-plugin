@@ -27,3 +27,4 @@ class WriteArchiveInput:
     upload_id: str
     user_id: str
     sample_id: str
+    mask_input_images: bool

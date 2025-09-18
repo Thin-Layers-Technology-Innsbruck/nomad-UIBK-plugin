@@ -78,6 +78,7 @@ class IFMTwoStepAnalysisResult(Entity, PlotSection, EntryData):
                     'datetime',
                     'lab_id',
                     'action_id',
+                    'image_masked',
                     'figures',
                     'sample',
                     'defect_prevalence',
@@ -108,6 +109,15 @@ class IFMTwoStepAnalysisResult(Entity, PlotSection, EntryData):
     action_id = Quantity(
         type=str,
         description='ID of the inference action.',
+    )
+
+    image_masked = Quantity(
+        type=bool,
+        description="""
+        True if image was masked automatically during analysis within nomad, False if 
+        image was already masked before being uploaded.
+        """,
+        a_eln=ELNAnnotation(label='image masked during analysis'),
     )
 
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):

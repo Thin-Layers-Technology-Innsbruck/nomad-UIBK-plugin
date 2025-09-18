@@ -54,6 +54,11 @@ ifm_analysis_app = App(
             title='Scratches - area fraction',
             format=Format(decimals=5, mode=ModeEnum.STANDARD),
         ),
+        Column(
+            search_quantity=f'data.image_masked#{schema}',
+            selected=True,
+            title='Masked automatically during analysis',
+        ),
         Column(search_quantity='entry_name', title='Name'),
         Column(search_quantity='entry_type'),
         Column(search_quantity='upload_create_time', title='Upload time'),

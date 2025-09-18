@@ -173,6 +173,7 @@ async def read_file_and_write_archive(writer_input: WriteArchiveInput):
         file=writer_input.csv_path,
         defect_prevalence=defect_prevalence,
         action_id=activity_info.workflow_id,
+        image_masked=writer_input.mask_input_images,
         sample=UIBKSampleReference(lab_id=writer_input.sample_id),
         figures=[
             PlotlyFigure(
