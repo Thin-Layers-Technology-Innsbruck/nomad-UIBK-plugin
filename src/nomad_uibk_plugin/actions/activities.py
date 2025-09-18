@@ -162,8 +162,7 @@ async def read_file_and_write_archive(writer_input: WriteArchiveInput):
 
     # create a new archive entry with the results of the analysis
     result_name = (
-        re.sub(r'_prediction\.csv$', '', writer_input.csv_path)
-        + '_inference_result'
+        re.sub(r'_prediction\.csv$', '', writer_input.csv_path) + '_inference_result'
     )
     activity_info = activity.info()
 
@@ -184,7 +183,7 @@ async def read_file_and_write_archive(writer_input: WriteArchiveInput):
 
     # add the new entry to the upload
     fname = os.path.join(result_name + '.archive.json')
-    fname = "/archive/".join(fname.rsplit("/raw/", 1))
+    fname = '/archive/'.join(fname.rsplit('/raw/', 1))
     with open(fname, 'w', encoding='utf-8') as f:
         json.dump({'data': result_entry.m_to_dict(with_root_def=True)}, f, indent=4)
     upload.process_upload(
