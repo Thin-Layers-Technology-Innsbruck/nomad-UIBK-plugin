@@ -112,6 +112,8 @@ class IFMTwoStepAnalysisResult(Entity, PlotSection, EntryData):
 
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
         super().normalize(archive, logger)
+        self.name = self.name.split('.')[0].replace('_', ' ')  # type: ignore
+        archive.metadata.entry_name = self.name
 
 
 class IFMTwoStepAnalysisResultReference(EntityReference):
