@@ -1,18 +1,8 @@
 from nomad.config.models.ui import (
     App,
-    Axis,
-    AxisScale,
     Column,
-    Dashboard,
     Format,
-    Menu,
-    MenuItemHistogram,
-    MenuItemOption,
-    MenuItemPeriodicTable,
-    MenuItemTerms,
-    MenuSizeEnum,
     ModeEnum,
-    ScaleEnum,
     SearchQuantities,
 )
 
