@@ -243,7 +243,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
             'If checked, attempt to mask the areas of the input image outside of '
             'the actual sample. The masked image will be saved in the same upload.'
         ),
-        default=True,
+        default=False,
         a_eln=ELNAnnotation(component=ELNComponentEnum.BoolEditQuantity),
     )
 
