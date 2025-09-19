@@ -1,8 +1,15 @@
 from nomad.config.models.ui import (
     App,
+    Axis,
+    AxisScale,
     Column,
     Format,
+    Menu,
+    MenuItemHistogram,
+    MenuItemTerms,
+    MenuSizeEnum,
     ModeEnum,
+    ScaleEnum,
     SearchQuantities,
 )
 
@@ -68,4 +75,61 @@ ifm_analysis_app = App(
         Column(search_quantity='datasets'),
         Column(search_quantity='published', title='Access'),
     ],
+    menu=Menu(
+        size=MenuSizeEnum.MD,
+        title='Menu',
+        items=[
+            Menu(
+                title='Sample',
+                size=MenuSizeEnum.MD,
+                items=[
+                    MenuItemTerms(
+                        search_quantity=f'data.sample.lab_id#{schema}',
+                        title='Sample ID',
+                        options=10,
+                    ),
+                    MenuItemTerms(
+                        search_quantity=f'data.image_masked#{schema}',
+                        title='Masked automatically during analysis',
+                        options=3,
+                        show_input=False,
+                    ),
+                ],
+            ),
+            Menu(
+                title='NOMAD Upload Information',
+                size=MenuSizeEnum.MD,
+                items=[
+                    MenuItemTerms(
+                        search_quantity='authors.name',
+                        title='Upload author',
+                        options=0,
+                    ),
+                    MenuItemHistogram(
+                        x=Axis(
+                            search_quantity='upload_create_time',
+                            title='Upload Creation Time',
+                        ),
+                        y=AxisScale(
+                            scale=ScaleEnum.LOG,
+                        ),
+                        title='Upload Creation Time',
+                        show_input=True,
+                        nbins=30,
+                    ),
+                ],
+            ),
+            # MenuItemHistogram(
+            #     x=Axis(
+            #         search_quantity=f"data.defect_prevalence[?name=='No Error'].prevalence#{schema}",  # noqa: E501
+            #     ),
+            #     y=AxisScale(
+            #         scale=ScaleEnum.LOG,
+            #     ),
+            #     title='No defect - area fraction',
+            #     show_input=True,
+            #     nbins=30,
+            # )
+        ],
+    ),
 )
