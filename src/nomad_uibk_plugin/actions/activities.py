@@ -192,9 +192,7 @@ async def read_file_and_write_archive(writer_input: WriteArchiveInput):
     target_dir = '/'.join(target_dir.split('/')[:-1])
     upload.process_upload(
         file_operations=[
-            dict(
-                op='ADD', path=fname, target_dir=target_dir, temporary=False
-            )
+            dict(op='ADD', path=fname, target_dir=target_dir, temporary=False)
         ],
         only_updated_files=True,
     )
