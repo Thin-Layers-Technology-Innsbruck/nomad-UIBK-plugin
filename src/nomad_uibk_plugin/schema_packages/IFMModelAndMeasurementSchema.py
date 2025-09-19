@@ -152,7 +152,8 @@ class IFMMeasurement(ELNMeasurement):
         # find corresponding data files
         bmp_name = re.sub(r'\.archive\.json$', '', archive.metadata.mainfile) + '.bmp'
         xml_name = (
-            re.sub(r'\.archive\.json$', '', archive.metadata.mainfile) + '_info.xml'
+            re.sub(r'texture\.archive\.json$', '', archive.metadata.mainfile)
+            + 'info.xml'
         )
 
         from nomad.processing.data import Entry

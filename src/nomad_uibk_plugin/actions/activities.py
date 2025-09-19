@@ -34,7 +34,7 @@ from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
 async def mask_image(masking_data: MaskingInput):
     input_path = masking_data.input_path
     if masking_data.mask_input_images:
-        index = input_path.rfind('/IFM_')
+        index = input_path.rfind('/')
         if index == -1:
             activity.logger.warning('Incorrect path for input image for masking.')
             return input_path
@@ -85,7 +85,7 @@ async def mask_image(masking_data: MaskingInput):
             # Save the result
             imageio.imwrite(output_path, img.astype(np.uint8))
         else:
-            activity.logger.warning('Output file already exists and not overwritten.')
+            activity.logger.info('Output file already exists and not overwritten.')
         return output_path
     else:
         return input_path
@@ -107,7 +107,7 @@ async def run_ifm_inference(data: InferenceInput):
             data.image_file_name, data.model_binary_name, data.model_classification_name
         )
     else:
-        activity.logger.warning('Output file already exists and not overwritten.')
+        activity.logger.info('Output file already exists and not overwritten.')
 
 
 @activity.defn
@@ -186,14 +186,15 @@ async def read_file_and_write_archive(writer_input: WriteArchiveInput):
 
     # add the new entry to the upload
     fname = os.path.join(result_name + '.archive.json')
-    fname = '/archive/'.join(fname.rsplit('/raw/', 1))
     with open(fname, 'w', encoding='utf-8') as f:
         json.dump({'data': result_entry.m_to_dict(with_root_def=True)}, f, indent=4)
+    target_dir = fname.split('/raw/')[-1]
+    target_dir = '/'.join(target_dir.split('/')[:-1])
     upload.process_upload(
         file_operations=[
             dict(
-                op='ADD', path=fname, target_dir='', temporary=True
-            )  # change to a proper target_dir later  # noqa: E501
+                op='ADD', path=fname, target_dir=target_dir, temporary=False
+            )
         ],
         only_updated_files=True,
     )
@@ -203,13 +204,14 @@ async def read_file_and_write_archive(writer_input: WriteArchiveInput):
     num_max_attempts = 20
     for i in range(num_max_attempts):
         for entry in Entry.objects(upload_id=upload.upload_id):  # type: ignore
-            if entry.mainfile == fname.split('/')[-1]:
+            if entry.mainfile == fname.split('/raw/')[-1]:
                 result_entry_id = entry.entry_id
                 entry_found = True
         if entry_found:
             break
         time.sleep(0.1)
 
+    print(f'#### entry found = {entry_found}, directory = {target_dir}')
     if entry_found:
         result_entry_reference = (
             f'../uploads/{upload.upload_id}/archive/{result_entry_id}#/data'

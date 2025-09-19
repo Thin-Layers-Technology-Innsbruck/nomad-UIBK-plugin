@@ -56,8 +56,8 @@ class IFMParserEntryPoint(ParserEntryPoint):
 ifmparser = IFMParserEntryPoint(
     name='IFMParser',
     description='IFM Parser for bmp and xml files.',
-    mainfile_name_re=r'.*/IFM_.*(?:\.bmp|_info\.xml)',
-    # mainfile_name_re=r'IFM_.*\.bmp',
+    mainfile_name_re=r'.*(?:/texture\.bmp|/info\.xml)',
+    # mainfile_name_re=r'.*/IFM_.*(?:\.bmp|_info\.xml)',
 )
 
 

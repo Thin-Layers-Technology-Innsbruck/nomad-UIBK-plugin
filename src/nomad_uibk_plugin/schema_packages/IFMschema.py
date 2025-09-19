@@ -22,6 +22,7 @@ from typing import (
 )
 
 from nomad.actions.utils import get_action_result, get_action_status, start_action
+from nomad.app.v1.models.models import MetadataRequired
 from nomad.datamodel.data import ArchiveSection, EntryData
 from nomad.datamodel.metainfo.annotations import (
     ELNAnnotation,
@@ -37,6 +38,7 @@ from nomad.datamodel.metainfo.plot import PlotSection
 from nomad.datamodel.metainfo.workflow import Link
 from nomad.metainfo import Quantity, SchemaPackage, Section, SubSection
 from nomad.processing.data import Entry
+from nomad.search import MetadataPagination, search
 from pint import UnitRegistry
 
 from nomad_uibk_plugin.actions.shared import InferenceInput
@@ -175,7 +177,7 @@ class InferenceStatus(ArchiveSection):
         super().normalize(archive, logger)
         if not self.status or self.status == 'RUNNING' or self.trigger_get_status:
             try:
-                status = get_action_status(self.action_id)  # pyright: ignore[reportArgumentType]
+                status = get_action_status(self.action_id, archive.metadata.authors[0].user_id)  # pyright: ignore[reportArgumentType]
                 if status:
                     self.status = status.name
             except Exception as e:
@@ -200,6 +202,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                     'datetime',
                     'overwrite_existing_results',
                     'mask_input_images',
+                    'add_all_inputs',
                     'trigger_run_action',
                     'trigger_get_statuses',
                     'description',
@@ -278,6 +281,19 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         ),
     )
 
+    add_all_inputs = Quantity(
+        type=bool,
+        default=False,
+        description="""
+        Find and add all possible inputs (IFMMeasurement entries) in this upload. 
+        Replaces all previously added manually inputs. Adds no more than 100 entries.
+        """,
+        a_eln=ELNAnnotation(
+            component=ELNComponentEnum.ActionEditQuantity,
+            label='Add All Inputs',
+        ),
+    )
+
     triggered_inferences = SubSection(
         section_def=InferenceStatus,
         description='A section for storing the status of the triggered inference '
@@ -285,11 +301,11 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         repeats=True,
     )
 
-    def check_results(self, logger: 'BoundLogger'):
+    def check_results(self, archive: 'EntryArchive', logger: 'BoundLogger'):
         if self.trigger_get_statuses and self.triggered_inferences:
             for inference in self.triggered_inferences:
                 try:
-                    status = get_action_status(inference.action_id)
+                    status = get_action_status(inference.action_id, archive.metadata.authors[0].user_id)  # noqa: E501
                     if status:
                         inference.status = status.name
                 except Exception as e:
@@ -300,10 +316,10 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         if self.triggered_inferences:
             for inference in self.triggered_inferences:
                 if inference.status == 'COMPLETED':
-                    result_ref = get_action_result(inference.action_id)
+                    result_ref = get_action_result(inference.action_id, archive.metadata.authors[0].user_id)
                     for output in self.outputs:
                         if output.action_id == inference.action_id:
-                            output.reference = result_ref
+                            output.reference = result_ref['ref']
 
         self.trigger_get_statuses = False
 
@@ -324,6 +340,29 @@ class IFMTwoStepAnalysis(ELNAnalysis):
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):  # noqa: PLR0912
         super().normalize(archive, logger)
         self.method = 'IFM Two Step Analysis'
+
+        # link IFMMeasurements automatically
+        if self.add_all_inputs:
+            self.add_all_inputs = False
+            self.inputs = []
+            query = {
+                'entry_type': 'IFMMeasurement',
+                'upload_id': archive.metadata.upload_id,
+            }
+            search_result = search(
+                owner='all',
+                query=query,
+                pagination=MetadataPagination(page_size=100),
+                user_id=archive.metadata.main_author.user_id,  # pyright: ignore
+                required=MetadataRequired(include=['entry_id', 'entry_name']),
+            )
+            for entry in search_result.data:
+                self.inputs.append(
+                    IFMMeasurementReference(
+                        name=entry['entry_name'],
+                        reference=f'../uploads/{archive.metadata.upload_id}/archive/{entry["entry_id"]}#/data',
+                    )
+                )
 
         # archive workflow linking
         if self.model_binary:
@@ -415,7 +454,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         else:
             logger.warning('No Models have been found. IFM analysis aborted.')
 
-        self.check_results(logger=logger)
+        self.check_results(archive=archive, logger=logger)
 
 
 m_package.__init_metainfo__()

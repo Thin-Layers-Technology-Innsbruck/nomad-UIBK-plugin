@@ -45,14 +45,14 @@ class IFMParser(MatchingParser):
         logger: 'BoundLogger',
     ) -> None:
         logger.info('IFMParser.parse')
-        data_file = mainfile.split('/')[-1]
+        data_file = mainfile.split('/raw/')[-1]
         entry = IFMMeasurement.m_from_dict(IFMMeasurement.m_def.a_template)
         file_str = ''.join(data_file.split('.')[:-1])
         if data_file.split('.')[-1] == 'bmp':
             file_name = f'{file_str}.archive.json'
             archive.metadata.entry_type = 'RawMeasurementFile'
         else:
-            file_str = re.sub(r'_info$', '', file_str)
+            file_str = re.sub(r'info$', 'texture', file_str)
             file_name = f'{file_str}.archive.json'
             archive.metadata.entry_type = 'RawMeasurementMetadataFile'
         create_archive(
@@ -75,7 +75,7 @@ class IFMModelParser(MatchingParser):
         logger: 'BoundLogger',
     ) -> None:
         logger.info('IFMModelParser.parse')
-        data_file = mainfile.split('/')[-1]
+        data_file = mainfile.split('/raw/')[-1]
         archive.metadata.entry_type = 'RawModelFile'
         entry = IFMModel.m_from_dict(IFMModel.m_def.a_template)
         file_str = ''.join(data_file.split('.')[:-1])

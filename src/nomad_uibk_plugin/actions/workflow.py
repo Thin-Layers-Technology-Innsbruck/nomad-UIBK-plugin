@@ -32,7 +32,7 @@ class InferenceWorkflow:
             input_for_masking,
             start_to_close_timeout=timedelta(seconds=600),
             retry_policy=RetryPolicy(
-                maximum_attempts=5,
+                maximum_attempts=20,
             ),
         )
 
@@ -41,7 +41,7 @@ class InferenceWorkflow:
             image_after_masking_name,
             start_to_close_timeout=timedelta(seconds=600),
             retry_policy=RetryPolicy(
-                maximum_attempts=5,
+                maximum_attempts=20,
             ),
         )
 
@@ -53,7 +53,7 @@ class InferenceWorkflow:
             data,
             start_to_close_timeout=timedelta(seconds=600),
             retry_policy=RetryPolicy(
-                maximum_attempts=5,
+                maximum_attempts=20,
             ),
         )
 
@@ -70,8 +70,8 @@ class InferenceWorkflow:
             input_for_writer,
             start_to_close_timeout=timedelta(seconds=60),
             retry_policy=RetryPolicy(
-                maximum_attempts=5,
+                maximum_attempts=20,
             ),
         )
 
-        return result_reference
+        return {'ref': result_reference}

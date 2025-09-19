@@ -119,17 +119,6 @@ ifm_analysis_app = App(
                     ),
                 ],
             ),
-            # MenuItemHistogram(
-            #     x=Axis(
-            #         search_quantity=f"data.defect_prevalence[?name=='No Error'].prevalence#{schema}",  # noqa: E501
-            #     ),
-            #     y=AxisScale(
-            #         scale=ScaleEnum.LOG,
-            #     ),
-            #     title='No defect - area fraction',
-            #     show_input=True,
-            #     nbins=30,
-            # )
         ],
     ),
 )
