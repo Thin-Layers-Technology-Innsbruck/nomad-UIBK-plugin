@@ -177,7 +177,9 @@ class InferenceStatus(ArchiveSection):
         super().normalize(archive, logger)
         if not self.status or self.status == 'RUNNING' or self.trigger_get_status:
             try:
-                status = get_action_status(self.action_id, archive.metadata.authors[0].user_id)  # pyright: ignore[reportArgumentType]
+                status = get_action_status(
+                    self.action_id, archive.metadata.authors[0].user_id
+                )  # pyright: ignore[reportArgumentType]
                 if status:
                     self.status = status.name
             except Exception as e:
@@ -305,7 +307,9 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         if self.trigger_get_statuses and self.triggered_inferences:
             for inference in self.triggered_inferences:
                 try:
-                    status = get_action_status(inference.action_id, archive.metadata.authors[0].user_id)  # noqa: E501
+                    status = get_action_status(
+                        inference.action_id, archive.metadata.authors[0].user_id
+                    )  # noqa: E501
                     if status:
                         inference.status = status.name
                 except Exception as e:
@@ -316,7 +320,9 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         if self.triggered_inferences:
             for inference in self.triggered_inferences:
                 if inference.status == 'COMPLETED':
-                    result_ref = get_action_result(inference.action_id, archive.metadata.authors[0].user_id)
+                    result_ref = get_action_result(
+                        inference.action_id, archive.metadata.authors[0].user_id
+                    )
                     for output in self.outputs:
                         if output.action_id == inference.action_id:
                             output.reference = result_ref['ref']
