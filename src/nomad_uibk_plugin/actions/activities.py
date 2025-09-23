@@ -31,7 +31,7 @@ from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
 
 
 @activity.defn
-async def mask_image(masking_data: MaskingInput):
+def mask_image(masking_data: MaskingInput):
     input_path = masking_data.input_path
     if masking_data.mask_input_images:
         index = input_path.rfind('/')
@@ -92,7 +92,7 @@ async def mask_image(masking_data: MaskingInput):
 
 
 @activity.defn
-async def generate_csv_path(image_path: str):
+def generate_csv_path(image_path: str):
     path, filename_with_ext = os.path.split(image_path)
     filename, _ = os.path.splitext(filename_with_ext)
     csv_path = os.path.join(path, f'{filename}_prediction.csv')
@@ -100,7 +100,7 @@ async def generate_csv_path(image_path: str):
 
 
 @activity.defn
-async def run_ifm_inference(data: InferenceInput):
+def run_ifm_inference(data: InferenceInput):
     if (not os.path.exists(data.csv_path)) or data.overwrite_existing_results:
         activity.logger.info('Extracting defects...')
         defect_recognition(

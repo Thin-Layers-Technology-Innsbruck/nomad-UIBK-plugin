@@ -70,7 +70,7 @@ class InferenceWorkflow:
             input_for_writer,
             start_to_close_timeout=timedelta(seconds=60),
             retry_policy=RetryPolicy(
-                maximum_attempts=20,
+                maximum_attempts=1,
             ),
         )
 
