@@ -111,7 +111,7 @@ def run_ifm_inference(data: InferenceInput):
 
 
 @activity.defn
-async def read_file_and_write_archive(writer_input: WriteArchiveInput):
+def read_file_and_write_archive(writer_input: WriteArchiveInput):
     if not os.path.exists(writer_input.csv_path):
         raise FileExistsError('No csv file found.')
     else:
