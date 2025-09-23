@@ -18,7 +18,7 @@ with workflow.unsafe.imports_passed_through():
 
 
 @workflow.defn
-class InferenceWorkflow:
+class IFMInferenceWorkflow:
     @workflow.run
     async def run(self, data: InferenceInput):
         input_for_masking = MaskingInput(
