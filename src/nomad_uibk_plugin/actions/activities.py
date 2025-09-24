@@ -19,8 +19,9 @@ from skimage.transform import hough_circle, hough_circle_peaks
 from temporalio import activity
 
 from nomad_uibk_plugin.actions.shared import (
-    InferenceInput,
+    ActivityInferenceInput,
     MaskingInput,
+    ProcessNewFilesInput,
     WriteArchiveInput,
 )
 from nomad_uibk_plugin.schema_packages.IFMschema import (
@@ -100,7 +101,7 @@ def generate_csv_path(image_path: str):
 
 
 @activity.defn
-def run_ifm_inference(data: InferenceInput):
+def run_ifm_inference(data: ActivityInferenceInput):
     if (not os.path.exists(data.csv_path)) or data.overwrite_existing_results:
         activity.logger.info('Extracting defects...')
         defect_recognition(
@@ -111,7 +112,7 @@ def run_ifm_inference(data: InferenceInput):
 
 
 @activity.defn
-def read_file_and_write_archive(writer_input: WriteArchiveInput):
+async def read_file_and_write_archive(writer_input: WriteArchiveInput):
     if not os.path.exists(writer_input.csv_path):
         raise FileExistsError('No csv file found.')
     else:
@@ -125,12 +126,6 @@ def read_file_and_write_archive(writer_input: WriteArchiveInput):
         relative_share = relative_share.sort_values(ascending=False)
         defect_mapping = {key: idx for idx, key in enumerate(defect_columns, start=1)}
         defect_data['label'] = defect_data['type'].map(defect_mapping)
-
-    upload = get_upload_with_read_access(
-        writer_input.upload_id,
-        User(user_id=writer_input.user_id),
-        include_others=True,
-    )
 
     defect_prevalence = []
     for key, value in relative_share.items():
@@ -184,37 +179,57 @@ def read_file_and_write_archive(writer_input: WriteArchiveInput):
         ],
     )
 
-    # add the new entry to the upload
+    # add the new .archive.json entry to the upload
     fname = os.path.join(result_name + '.archive.json')
     with open(fname, 'w', encoding='utf-8') as f:
         json.dump({'data': result_entry.m_to_dict(with_root_def=True)}, f, indent=4)
-    target_dir = fname.split('/raw/')[-1]
-    target_dir = '/'.join(target_dir.split('/')[:-1])
-    upload.process_upload(
-        file_operations=[
-            dict(op='ADD', path=fname, target_dir=target_dir, temporary=False)
-        ],
+
+    return fname
+
+
+@activity.defn
+async def process_new_files(data: ProcessNewFilesInput):
+    file_operations = []
+    mainfile_names = []
+
+    for path in data.result_path:
+        target_dir = path.split('/raw/')[-1]
+        mainfile_names.append(target_dir)
+        target_dir = '/'.join(target_dir.split('/')[:-1])
+        file_operations.append(
+            dict(op='ADD', path=path, target_dir=target_dir, temporary=False)
+        )
+
+    max_attempt_num = 100
+    for i in range(max_attempt_num):
+        upload = get_upload_with_read_access(
+            data.upload_id,
+            User(user_id=data.user_id),
+            include_others=True,
+        )
+
+        if not upload.process_running:
+            break
+        else:
+            # reload if upload is busy
+            time.sleep(0.5)
+            activity.logger.warning('Upload is currently being processed. Waiting...')
+
+    handle = upload.process_upload(
+        file_operations=file_operations,
         only_updated_files=True,
     )
 
-    # find entry_id for the resulting new entry
-    entry_found = False
-    num_max_attempts = 20
-    for i in range(num_max_attempts):
-        for entry in Entry.objects(upload_id=upload.upload_id):  # type: ignore
-            if entry.mainfile == fname.split('/raw/')[-1]:
-                result_entry_id = entry.entry_id
-                entry_found = True
-        if entry_found:
-            break
-        time.sleep(0.1)
+    await handle.result()
 
-    print(f'#### entry found = {entry_found}, directory = {target_dir}')
-    if entry_found:
-        result_entry_reference = (
-            f'../uploads/{upload.upload_id}/archive/{result_entry_id}#/data'
-        )
-    else:
-        result_entry_reference = None
+    result_entry_refs = []
+    all_entries_this_upload = Entry.objects(upload_id=upload.upload_id)
 
-    return result_entry_reference
+    for mainfile_name in mainfile_names:
+        for entry in all_entries_this_upload:
+            if entry.mainfile == mainfile_name:
+                result_entry_refs.append(
+                    f'../uploads/{upload.upload_id}/archive/{entry.entry_id}#/data'
+                )
+
+    return result_entry_refs

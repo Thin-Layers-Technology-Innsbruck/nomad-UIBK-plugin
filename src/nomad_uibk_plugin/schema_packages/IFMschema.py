@@ -162,30 +162,10 @@ class InferenceStatus(ArchiveSection):
         type=str,
         description='Status of the inference action.',
     )
-    trigger_get_status = Quantity(
-        type=bool,
-        default=False,
-        description='Retrieve the current status of the inference action.',
-        a_eln=ELNAnnotation(
-            component=ELNComponentEnum.ActionEditQuantity,
-            label='Get Action Status',
-        ),
-    )
 
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
         """Normalize the section to ensure it is ready for processing."""
         super().normalize(archive, logger)
-        if not self.status or self.status == 'RUNNING' or self.trigger_get_status:
-            try:
-                status = get_action_status(
-                    self.action_id, archive.metadata.authors[0].user_id
-                )  # pyright: ignore[reportArgumentType]
-                if status:
-                    self.status = status.name
-            except Exception as e:
-                logger.error(f'Error getting action status: {e}. ')
-            finally:
-                self.trigger_get_status = False
 
 
 class IFMTwoStepAnalysis(ELNAnalysis):
@@ -206,7 +186,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                     'mask_input_images',
                     'add_all_inputs',
                     'trigger_run_action',
-                    'trigger_get_statuses',
+                    'trigger_get_status',
                     'description',
                     'lab_id',
                     'location',
@@ -217,7 +197,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                     'model_classification',
                     'steps',
                     'analysis_identifiers',
-                    'triggered_inferences',
+                    'triggered_inference',
                     'outputs',
                 ]
             )
@@ -273,13 +253,13 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         ),
     )
 
-    trigger_get_statuses = Quantity(
+    trigger_get_status = Quantity(
         type=bool,
         default=False,
-        description='Retrieve the current status of the inference actions.',
+        description='Retrieve the current status of the inference action.',
         a_eln=ELNAnnotation(
             component=ELNComponentEnum.ActionEditQuantity,
-            label='Get Actions Status',
+            label='Get Action Status',
         ),
     )
 
@@ -292,42 +272,37 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         """,
         a_eln=ELNAnnotation(
             component=ELNComponentEnum.ActionEditQuantity,
-            label='Add All Inputs',
+            label='Add All IFMMeasurement Inputs',
         ),
     )
 
-    triggered_inferences = SubSection(
+    triggered_inference = SubSection(
         section_def=InferenceStatus,
         description='A section for storing the status of the triggered inference '
-        'actions.',
-        repeats=True,
+        'action.',
     )
 
     def check_results(self, archive: 'EntryArchive', logger: 'BoundLogger'):
-        if self.trigger_get_statuses and self.triggered_inferences:
-            for inference in self.triggered_inferences:
-                try:
-                    status = get_action_status(
-                        inference.action_id, archive.metadata.authors[0].user_id
-                    )  # noqa: E501
-                    if status:
-                        inference.status = status.name
-                except Exception as e:
-                    logger.error(f'Error getting action status: {e}. ')
-                finally:
-                    inference.trigger_get_status = False
+        if self.trigger_get_status and self.triggered_inference:
+            try:
+                status = get_action_status(
+                    self.triggered_inference.action_id,
+                    archive.metadata.authors[0].user_id,
+                )  # noqa: E501
+                if status:
+                    self.triggered_inference.status = status.name
+            except Exception as e:
+                logger.error(f'Error getting action status: {e}. ')
 
-        if self.triggered_inferences:
-            for inference in self.triggered_inferences:
-                if inference.status == 'COMPLETED':
-                    result_ref = get_action_result(
-                        inference.action_id, archive.metadata.authors[0].user_id
-                    )
-                    for output in self.outputs:
-                        if output.action_id == inference.action_id:
-                            output.reference = result_ref['ref']
+            if self.triggered_inference.status == 'COMPLETED':
+                result_refs = get_action_result(
+                    self.triggered_inference.action_id,
+                    archive.metadata.authors[0].user_id,
+                )
+                for i, output in enumerate(self.outputs):
+                    output.reference = result_refs['refs'][i]
 
-        self.trigger_get_statuses = False
+        self.trigger_get_status = False
 
     def find_source_path_from_ref(self, input_ref_subsection, extension):
         ref = input_ref_subsection.m_to_dict()['reference']
@@ -389,7 +364,6 @@ class IFMTwoStepAnalysis(ELNAnalysis):
 
             if self.trigger_run_action:
                 # remove subsections corresponding to previous runs
-                self.triggered_inferences = []
                 self.outputs = []
                 binary_source_path = self.find_source_path_from_ref(
                     self.model_binary, '.keras'
@@ -397,6 +371,19 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                 classification_source_path = self.find_source_path_from_ref(
                     self.model_classification, '.keras'
                 )
+                input_data = InferenceInput(
+                    upload_id=archive.metadata.upload_id,
+                    user_id=archive.metadata.authors[0].user_id,
+                    sample_id=[],
+                    image_file_name=[],
+                    model_binary_name=binary_source_path,
+                    model_classification_name=classification_source_path,
+                    csv_path=[],  # filled later inside the workflow
+                    overwrite_existing_results=self.overwrite_existing_results,
+                    mask_input_images=self.mask_input_images,
+                )
+
+                # create input data for the inference action
                 for input in self.inputs:
                     # check that input has sample associated with it
                     if not input.reference:
@@ -414,44 +401,35 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                             + 'This input will be ignored.'
                         )
                         continue
-                    # Execute action that runs Georgs code to extract the defects
-                    # and creates results entries
 
                     image_source_path = self.find_source_path_from_ref(input, '.bmp')
 
-                    # run action with analysis
-                    try:
-                        input_data = InferenceInput(
-                            upload_id=archive.metadata.upload_id,
-                            user_id=archive.metadata.authors[0].user_id,
-                            sample_id=input.reference.samples[0].lab_id,
-                            image_file_name=image_source_path,
-                            model_binary_name=binary_source_path,
-                            model_classification_name=classification_source_path,
-                            csv_path='',  # filled later inside the workflow
-                            overwrite_existing_results=self.overwrite_existing_results,
-                            mask_input_images=self.mask_input_images,
+                    input_data.sample_id.append(input.reference.samples[0].lab_id)
+                    input_data.image_file_name.append(image_source_path)
+                    input_data.csv_path.append('')
+                    self.outputs.append(
+                        IFMTwoStepAnalysisResultReference(
+                            name=input.name + '_inference_result',
+                            # action_id=action_id,
                         )
-                        action_id = start_action(
-                            action_id='nomad_uibk_plugin.actions:ifm_inference',
-                            data=input_data,
-                        )
+                    )
 
-                        # create outputs (empty for now) and inference status for each
-                        # input image
-                        self.triggered_inferences.append(
-                            InferenceStatus(action_id=action_id, status='RUNNING')
-                        )  # type: ignore
-                        self.outputs.append(
-                            IFMTwoStepAnalysisResultReference(
-                                name=input.name + '_inference_result',
-                                action_id=action_id,
-                            )
-                        )  # type: ignore
-                    except Exception as e:
-                        logger.error(f'Error running action: {e}')
+                # 'unclick' buttons
                 self.trigger_run_action = False
                 self.overwrite_existing_results = False
+
+                # Execute action that runs Georgs code to extract the defects
+                # and creates results entries
+                try:
+                    action_id = start_action(
+                        action_id='nomad_uibk_plugin.actions:ifm_inference',
+                        data=input_data,
+                    )
+                    self.triggered_inference = InferenceStatus(
+                        action_id=action_id, status='RUNNING'
+                    )
+                except Exception as e:
+                    logger.error(f'Error running action: {e}')
 
         elif self.model_binary and self.model_classification:
             logger.warning(
