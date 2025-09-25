@@ -66,7 +66,6 @@ class MicroCellArray(ArchiveSection):
     cells = SubSection(section_def=MicroCell, label='MicroCells', repeats=True)
 
 
-
 class AlternativeID(ArchiveSection):
     m_def = Section(label_quantity='alternative_id')
 
