@@ -66,10 +66,44 @@ class MicroCellArray(ArchiveSection):
     cells = SubSection(section_def=MicroCell, label='MicroCells', repeats=True)
 
 
-class UIBKSample(CompositeSystem, EntryData, PlotSection):
+class AlternativeID(ArchiveSection):
+    m_def = Section(label_quantity='alternative_id')
+
+    alternative_id = Quantity(type=str, a_eln=dict(component='StringEditQuantity'))
+
+    location = Quantity(type=str, a_eln=dict(component='StringEditQuantity'))
+
+    description = Quantity(type=str, a_eln=dict(component='RichTextEditQuantity'))
+
+    url_to_resource = Quantity(type=str, a_eln=dict(component='URLEditQuantity'))
+
+
+class UIBKSample(CompositeSystem, EntryData):
     m_def = Section(
         categories=[UIBKCategory],
         label='UIBK Sample',
+    )
+
+    alternative_id = SubSection(
+        section_def=AlternativeID,
+        description="""An alternative ID for the sample used in the different lab,
+            unique for that lab""",
+        repeats=True,
+    )
+
+    def normalize(self, archive, logger: 'BoundLogger'):
+        super().normalize(archive, logger)
+        archive.metadata.entry_name = self.name
+
+        for alt_id in self.alternative_id:
+            if alt_id not in archive.results.eln.lab_ids:
+                archive.results.eln.lab_ids.append(alt_id.alternative_id)  # pyright: ignore[reportAttributeAccessIssue]
+
+
+class UIBKSampleWithArray(UIBKSample, PlotSection):
+    m_def = Section(
+        categories=[UIBKCategory],
+        label='UIBK Sample With Array',
     )
 
     array_generator = SubSection(
