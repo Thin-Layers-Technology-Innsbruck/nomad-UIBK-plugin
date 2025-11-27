@@ -184,6 +184,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                     'datetime',
                     'overwrite_existing_results',
                     'mask_input_images',
+                    'save_resulting_image',
                     'add_all_inputs',
                     'trigger_run_action',
                     'trigger_get_status',
@@ -193,8 +194,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                     'tags',
                     'method',
                     'inputs',
-                    'model_binary',
-                    'model_classification',
+                    'model',
                     'steps',
                     'analysis_identifiers',
                     'triggered_inference',
@@ -214,14 +214,14 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         description='Output data from the automated image analysis.',
         repeats=True,
     )
-    model_binary = SubSection(
+    model = SubSection(
         section_def=IFMModelReference,
         description='Model for the automated image analysis.',
     )
-    model_classification = SubSection(
-        section_def=IFMModelReference,
-        description='Model for the automated image analysis.',
-    )
+    # model_classification = SubSection(
+    #     section_def=IFMModelReference,
+    #     description='Model for the automated image analysis.',
+    # )
 
     overwrite_existing_results = Quantity(
         type=bool,
@@ -239,6 +239,16 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         description=(
             'If checked, attempt to mask the areas of the input image outside of '
             'the actual sample. The masked image will be saved in the same upload.'
+        ),
+        default=False,
+        a_eln=ELNAnnotation(component=ELNComponentEnum.BoolEditQuantity),
+    )
+
+    save_resulting_image = Quantity(
+        type=bool,
+        description=(
+            'If checked, saves the image with the defects found as an overlay in '
+            'the same upload.'
         ),
         default=False,
         a_eln=ELNAnnotation(component=ELNComponentEnum.BoolEditQuantity),
@@ -346,41 +356,45 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                 )
 
         # archive workflow linking
-        if self.model_binary:
+        if self.model:
             archive.workflow2.inputs.append(  # type: ignore
-                Link(name='Binary Model', section=self.model_binary.reference)
+                Link(name='Binary Model', section=self.model.reference)
             )
-        if self.model_classification:
-            archive.workflow2.inputs.append(  # type: ignore
-                Link(
-                    name='Classification Model',
-                    section=self.model_classification.reference,
-                )
-            )
+        # if self.model_classification:
+        #     archive.workflow2.inputs.append(  # type: ignore
+        #         Link(
+        #             name='Classification Model',
+        #             section=self.model_classification.reference,
+        #         )
+            # )
 
         # check if all necessary inputs are given
-        if self.inputs and self.model_binary and self.model_classification:
+        if self.inputs and self.model:
             logger.info('Two Models found. Ready for IFM Two Step Analysis.')
 
             if self.trigger_run_action:
                 # remove subsections corresponding to previous runs
                 self.outputs = []
                 binary_source_path = self.find_source_path_from_ref(
-                    self.model_binary, '.keras'
+                    self.model, '.pt'
                 )
-                classification_source_path = self.find_source_path_from_ref(
-                    self.model_classification, '.keras'
-                )
+                # classification_source_path = self.find_source_path_from_ref(
+                #     self.model_classification, '.keras'
+                # )
                 input_data = InferenceInput(
                     upload_id=archive.metadata.upload_id,
                     user_id=archive.metadata.authors[0].user_id,
                     sample_id=[],
                     image_file_name=[],
-                    model_binary_name=binary_source_path,
-                    model_classification_name=classification_source_path,
+                    pixel_size=[],
+                    model_name=binary_source_path,
+                    # model_classification_name=classification_source_path,
                     csv_path=[],  # filled later inside the workflow
+                    h5_path=[],
+                    output_path=[],
                     overwrite_existing_results=self.overwrite_existing_results,
                     mask_input_images=self.mask_input_images,
+                    save_resulting_image=self.save_resulting_image,
                 )
 
                 # create input data for the inference action
@@ -407,6 +421,9 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                     input_data.sample_id.append(input.reference.samples[0].lab_id)
                     input_data.image_file_name.append(image_source_path)
                     input_data.csv_path.append('')
+                    input_data.h5_path.append('')
+                    input_data.output_path.append('')
+                    input_data.pixel_size.append(input.reference.pixel_size.magnitude)
                     self.outputs.append(
                         IFMTwoStepAnalysisResultReference(
                             name=input.name + '_inference_result',
@@ -431,7 +448,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                 except Exception as e:
                     logger.error(f'Error running action: {e}')
 
-        elif self.model_binary and self.model_classification:
+        elif self.model:
             logger.warning(
                 'No inputs to process have been found. IFM analysis aborted.'
             )

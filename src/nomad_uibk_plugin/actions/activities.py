@@ -3,13 +3,13 @@ import os
 import re
 import time
 
+import h5py
 import imageio
 import numpy as np
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objs as go
-from ifm_image_defect_detection.defectRecognition_toCSV import (
-    defect_recognition,
-)
+from ifm_imagesegmentation.inference import run_image_segmentation
 from nomad.app.v1.routers.uploads import get_upload_with_read_access
 from nomad.datamodel import User
 from nomad.datamodel.metainfo.plot import PlotlyFigure
@@ -30,6 +30,8 @@ from nomad_uibk_plugin.schema_packages.IFMschema import (
 )
 from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
 
+PATCH_SIZE = 640
+LONG_SIDE_PLOT = 512    # approximate value due to int operations
 
 @activity.defn
 def mask_image(masking_data: MaskingInput):
@@ -93,19 +95,26 @@ def mask_image(masking_data: MaskingInput):
 
 
 @activity.defn
-def generate_csv_path(image_path: str):
-    path, filename_with_ext = os.path.split(image_path)
+def generate_paths(image_path: str):
+    output_path, filename_with_ext = os.path.split(image_path)
     filename, _ = os.path.splitext(filename_with_ext)
-    csv_path = os.path.join(path, f'{filename}_prediction.csv')
-    return csv_path
+    csv_path = os.path.join(output_path, f'{filename}_prediction.csv')
+    h5_path = os.path.join(output_path, f'{filename}_prediction.h5')
+    return output_path, csv_path, h5_path
 
 
 @activity.defn
 def run_ifm_inference(data: ActivityInferenceInput):
     if (not os.path.exists(data.csv_path)) or data.overwrite_existing_results:
         activity.logger.info('Extracting defects...')
-        defect_recognition(
-            data.image_file_name, data.model_binary_name, data.model_classification_name
+        run_image_segmentation(
+            image_path=data.image_file_name,
+            model_path=data.model_name,
+            output_path=data.output_path,
+            patch_size=PATCH_SIZE,
+            pixel_size=data.pixel_size,
+            save_png=data.save_resulting_image,
+            save_h5=True,
         )
     else:
         activity.logger.info('Output file already exists and not overwritten.')
@@ -115,47 +124,71 @@ def run_ifm_inference(data: ActivityInferenceInput):
 async def read_file_and_write_archive(writer_input: WriteArchiveInput):
     if not os.path.exists(writer_input.csv_path):
         raise FileExistsError('No csv file found.')
-    else:
-        defect_data = pd.read_csv(writer_input.csv_path, skiprows=2)
-        defect_columns = defect_data.columns.to_list()
-        defect_columns.remove('x')
-        defect_columns.remove('y')
-        defect_data['type'] = defect_data[defect_columns].idxmax(axis=1)
-        relative_share = defect_data['type'].value_counts(normalize=True)
-        relative_share = relative_share.reindex(defect_columns, fill_value=0.0)
-        relative_share = relative_share.sort_values(ascending=False)
-        defect_mapping = {key: idx for idx, key in enumerate(defect_columns, start=1)}
-        defect_data['label'] = defect_data['type'].map(defect_mapping)
+    if not os.path.exists(writer_input.h5_path):
+        raise FileExistsError('No h5 file found.')
+
+    with h5py.File(writer_input.h5_path, 'r') as f:
+        mask = f["mask"][()]
+        mask_types = f["mask_layers"][()]
+    
+    # count defect prevalence from the masks
+    mask_types = [msk.decode() for msk in mask_types]
+    defect_pixels = np.sum(mask, axis=(1, 2))
+    defect_types = mask_types
+    no_def_pixel = 0
+    for i, mask_type, def_pixel in zip(range(len(mask_types)), mask_types, defect_pixels):
+        if mask_type == "Sample":
+            total_pixel = def_pixel
+            no_def_pixel += def_pixel
+            no_def_index = i
+        else:
+            no_def_pixel -= def_pixel
+
+    defect_types[no_def_index] = "No Defect"
+    relative_share = defect_pixels / total_pixel
+    relative_share[no_def_index] = no_def_pixel / total_pixel
 
     defect_prevalence = []
-    for key, value in relative_share.items():
+    for key, value in zip(defect_types, relative_share):
         defect_prevalence.append(DefectPrevalence(name=key, prevalence=value))
 
-    # create defects figure
-    heatmap = go.Heatmap(
-        x=defect_data['x'],
-        y=defect_data['y'],
-        z=defect_data['label'],
-        colorscale='Viridis',
-        colorbar=dict(
-            tickvals=[1, 2, 3, 4],
-            ticktext=defect_columns,
-            title='Defect Type',
-        ),
-    )
+    # Downscale masks for plotting
+    layers, h, w = mask.shape # type: ignore
+    long_side = max(h, w)
+    scale = max(long_side // LONG_SIDE_PLOT, 1)
+    small_h = h // scale
+    small_w = w // scale
+    small_mask = np.zeros((layers, small_h, small_w), dtype=bool)
 
-    figure = go.Figure(data=heatmap)
-    figure.update_layout(
-        title='Heatmap of Defect Distribution',
-        xaxis_title='X Position',
-        yaxis_title='Y Position',
-        xaxis=dict(scaleanchor='y'),
-        yaxis=dict(scaleanchor='x'),
-        autosize=True,
-    )
+    for layer in range(layers):
+        row_buffer = np.zeros((scale, w), dtype=bool)
+        row_in_buffer = 0
+        out_row = 0
+        for row_index in range(h):
+            row_buffer[row_in_buffer] = mask[layer, row_index]
+            row_in_buffer += 1
 
+            # enough raws in buffer for one pool vertically
+            if row_in_buffer == scale:
+                # pool vertically, then horizontally
+                v_pool = row_buffer.max(axis=0)
+                h_and_v_pool = v_pool[:small_w*scale].reshape(small_w, scale).max(axis=1)
+                small_mask[layer, out_row] = h_and_v_pool
+                out_row += 1
+                row_in_buffer = 0
+
+    # create figure with defects as json
+    data_to_show = np.zeros((small_h, small_w), dtype=int)
+    for i in range(layers):
+        if i != no_def_index:
+            data_to_show += (np.logical_not(data_to_show) & small_mask[i]).astype(int)*(i+1)
+    data_to_show += small_mask[no_def_index].astype(int)
+    figure = px.imshow(
+        data_to_show,
+        # color_continuous_scale=["black", "white"]
+    )
+    figure.update_coloraxes(showscale=False)
     figure_json = figure.to_plotly_json()
-    figure_json['config'] = {'staticPlot': True}
 
     # create a new archive entry with the results of the analysis
     result_name = (
@@ -185,6 +218,81 @@ async def read_file_and_write_archive(writer_input: WriteArchiveInput):
         json.dump({'data': result_entry.m_to_dict(with_root_def=True)}, f, indent=4)
 
     return fname
+
+# @activity.defn
+# async def read_file_and_write_archive(writer_input: WriteArchiveInput):
+#     if not os.path.exists(writer_input.csv_path):
+#         raise FileExistsError('No csv file found.')
+#     else:
+#         defect_data = pd.read_csv(writer_input.csv_path, skiprows=2)
+#         defect_columns = defect_data.columns.to_list()
+#         defect_columns.remove('x')
+#         defect_columns.remove('y')
+#         defect_data['type'] = defect_data[defect_columns].idxmax(axis=1)
+#         relative_share = defect_data['type'].value_counts(normalize=True)
+#         relative_share = relative_share.reindex(defect_columns, fill_value=0.0)
+#         relative_share = relative_share.sort_values(ascending=False)
+#         defect_mapping = {key: idx for idx, key in enumerate(defect_columns, start=1)}
+#         defect_data['label'] = defect_data['type'].map(defect_mapping)
+
+#     defect_prevalence = []
+#     for key, value in relative_share.items():
+#         defect_prevalence.append(DefectPrevalence(name=key, prevalence=value))
+
+#     # create defects figure
+#     heatmap = go.Heatmap(
+#         x=defect_data['x'],
+#         y=defect_data['y'],
+#         z=defect_data['label'],
+#         colorscale='Viridis',
+#         colorbar=dict(
+#             tickvals=[1, 2, 3, 4],
+#             ticktext=defect_columns,
+#             title='Defect Type',
+#         ),
+#     )
+
+#     figure = go.Figure(data=heatmap)
+#     figure.update_layout(
+#         title='Heatmap of Defect Distribution',
+#         xaxis_title='X Position',
+#         yaxis_title='Y Position',
+#         xaxis=dict(scaleanchor='y'),
+#         yaxis=dict(scaleanchor='x'),
+#         autosize=True,
+#     )
+
+#     figure_json = figure.to_plotly_json()
+#     figure_json['config'] = {'staticPlot': True}
+
+#     # create a new archive entry with the results of the analysis
+#     result_name = (
+#         re.sub(r'_prediction\.csv$', '', writer_input.csv_path) + '_inference_result'
+#     )
+#     activity_info = activity.info()
+
+#     result_entry = IFMTwoStepAnalysisResult(
+#         name=result_name.split('/')[-1],
+#         file=writer_input.csv_path,
+#         defect_prevalence=defect_prevalence,
+#         action_id=activity_info.workflow_id,
+#         image_masked=writer_input.mask_input_images,
+#         sample=UIBKSampleReference(lab_id=writer_input.sample_id),
+#         figures=[
+#             PlotlyFigure(
+#                 label='Defect Distribution Heatmap',
+#                 index=0,
+#                 figure=figure_json,
+#             )
+#         ],
+#     )
+
+#     # add the new .archive.json entry to the upload
+#     fname = os.path.join(result_name + '.archive.json')
+#     with open(fname, 'w', encoding='utf-8') as f:
+#         json.dump({'data': result_entry.m_to_dict(with_root_def=True)}, f, indent=4)
+
+#     return fname
 
 
 @activity.defn

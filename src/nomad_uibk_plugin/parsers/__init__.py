@@ -76,5 +76,5 @@ class IFMModelParserEntryPoint(ParserEntryPoint):
 ifmmodelparser = IFMModelParserEntryPoint(
     name='IFMModelParser',
     description='IFM Model Parser for keras files.',
-    mainfile_name_re=r'.*/Model_.*(?:_binary\.keras|_classification\.keras)',
+    mainfile_name_re=r'.*/IFM_.*\.pt',
 )

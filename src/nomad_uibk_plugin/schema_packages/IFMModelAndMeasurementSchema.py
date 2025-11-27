@@ -140,6 +140,13 @@ class IFMMeasurement(ELNMeasurement):
         description='Magnification used for the measurement.',
     )
 
+    pixel_size = Quantity(
+        type=float,
+        description='Size of a pixel of the image',
+        unit='meter',
+        a_eln=ELNAnnotation(defaultDisplayUnit='mm'),
+    )
+
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
         """
         Tasks in here:
@@ -264,7 +271,7 @@ class IFMModel(Entity, EntryData):
 
         # find corresponding data files
         source_name = (
-            re.sub(r'\.archive\.json$', '', archive.metadata.mainfile) + '.keras'
+            re.sub(r'\.archive\.json$', '', archive.metadata.mainfile) + '.pt'
         )
 
         from nomad.processing.data import Entry
@@ -273,14 +280,14 @@ class IFMModel(Entity, EntryData):
             if entry.mainfile == source_name:
                 self.file = source_name
 
-        if self.file is not None:
-            logger.info('Model file recognized. Parsing...')
+        # if self.file is not None:
+        #     logger.info('Model file recognized. Parsing...')
 
-            from nomad_uibk_plugin.filereader.IFMreader import read_keras_metadata
+        #     from nomad_uibk_plugin.filereader.IFMreader import read_keras_metadata
 
-            with archive.m_context.raw_file(self.file, 'rb') as file:
-                model = read_keras_metadata(file, archive, logger)
-                merge_sections(self, model, logger)
+        #     with archive.m_context.raw_file(self.file, 'rb') as file:
+        #         model = read_keras_metadata(file, archive, logger)
+        #         merge_sections(self, model, logger)
 
         super().normalize(archive, logger)
 

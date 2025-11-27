@@ -5,7 +5,7 @@ from temporalio.common import RetryPolicy
 
 with workflow.unsafe.imports_passed_through():
     from nomad_uibk_plugin.actions.activities import (
-        generate_csv_path,
+        generate_paths,
         mask_image,
         process_new_files,
         read_file_and_write_archive,
@@ -19,6 +19,7 @@ with workflow.unsafe.imports_passed_through():
         WriteArchiveInput,
     )
 
+MAXIMUM_ATTEMPTS = 3
 
 @workflow.defn
 class IFMInferenceWorkflow:
@@ -28,6 +29,7 @@ class IFMInferenceWorkflow:
         if (
             (input_num != len(data.image_file_name))
             or (input_num != len(data.csv_path))
+            or (input_num != len(data.output_path))
             or (input_num == 0)
         ):
             return None
@@ -45,28 +47,33 @@ class IFMInferenceWorkflow:
                     input_for_masking,
                     start_to_close_timeout=timedelta(seconds=600),
                     retry_policy=RetryPolicy(
-                        maximum_attempts=20,
+                        maximum_attempts=MAXIMUM_ATTEMPTS,
                     ),
                 )
 
-                csv_path = await workflow.execute_activity(
-                    generate_csv_path,
+                output_path, csv_path, h5_path = await workflow.execute_activity(
+                    generate_paths,
                     image_after_masking_name,
                     start_to_close_timeout=timedelta(seconds=600),
                     retry_policy=RetryPolicy(
-                        maximum_attempts=20,
+                        maximum_attempts=MAXIMUM_ATTEMPTS,
                     ),
                 )
 
                 data.image_file_name[i] = image_after_masking_name
                 data.csv_path[i] = csv_path
+                data.h5_path[i] = h5_path
+                data.output_path[i] = output_path
 
                 data_inference_run = ActivityInferenceInput(
                     image_file_name=data.image_file_name[i],
-                    model_binary_name=data.model_binary_name,
-                    model_classification_name=data.model_classification_name,
+                    model_name=data.model_name,
+                    pixel_size=data.pixel_size[i],
                     csv_path=data.csv_path[i],
+                    h5_path=data.h5_path[i],
+                    output_path=data.output_path[i],
                     overwrite_existing_results=data.overwrite_existing_results,
+                    save_resulting_image=data.save_resulting_image,
                 )
 
                 await workflow.execute_activity(
@@ -74,12 +81,14 @@ class IFMInferenceWorkflow:
                     data_inference_run,
                     start_to_close_timeout=timedelta(seconds=600),
                     retry_policy=RetryPolicy(
-                        maximum_attempts=20,
+                        maximum_attempts=MAXIMUM_ATTEMPTS,
                     ),
                 )
 
                 input_for_writer = WriteArchiveInput(
                     csv_path=data.csv_path[i],
+                    h5_path=data.h5_path[i],
+                    output_path=data.output_path[i],
                     upload_id=data.upload_id,
                     user_id=data.user_id,
                     sample_id=data.sample_id[i],
@@ -91,7 +100,7 @@ class IFMInferenceWorkflow:
                     input_for_writer,
                     start_to_close_timeout=timedelta(seconds=60),
                     retry_policy=RetryPolicy(
-                        maximum_attempts=20,
+                        maximum_attempts=MAXIMUM_ATTEMPTS,
                     ),
                 )
 
@@ -108,7 +117,7 @@ class IFMInferenceWorkflow:
                 input_for_process,
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=RetryPolicy(
-                    maximum_attempts=20,
+                    maximum_attempts=MAXIMUM_ATTEMPTS,
                 ),
             )
 

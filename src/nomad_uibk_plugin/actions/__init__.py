@@ -19,7 +19,7 @@ class IFMInferenceEntryPoint(ActionEntryPoint):
         from nomad.actions import Action
 
         from nomad_uibk_plugin.actions.activities import (
-            generate_csv_path,
+            generate_paths,
             mask_image,
             process_new_files,
             read_file_and_write_archive,
@@ -31,7 +31,7 @@ class IFMInferenceEntryPoint(ActionEntryPoint):
             task_queue=self.task_queue,
             workflow=IFMInferenceWorkflow,
             activities=[
-                generate_csv_path,
+                generate_paths,
                 mask_image,
                 process_new_files,
                 read_file_and_write_archive,

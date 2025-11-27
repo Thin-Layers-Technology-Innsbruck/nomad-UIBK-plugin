@@ -65,7 +65,7 @@ class IFMParser(MatchingParser):
 
 class IFMModelParser(MatchingParser):
     """
-    Parser for matching IFM .bmp or .xml files and creating instances of IFMMeasurement.
+    Parser for matching IFM .keras model and creating instances of IFMModel.
     """
 
     def parse(

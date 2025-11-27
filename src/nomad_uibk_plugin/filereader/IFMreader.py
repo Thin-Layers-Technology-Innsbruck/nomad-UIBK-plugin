@@ -67,6 +67,11 @@ def read_ifm_xml(
     magnification = root.find('.//ifmData/magnification').text
     if magnification:
         metadata['magnification'] = float(magnification)
+    pixel_vector = root.find('.//generalCalibrationData/pixelsize/vector')
+    if pixel_vector is not None:
+        px_str = pixel_vector.text.strip().split()
+        if len(px_str) > 1:
+            metadata['pixel_size'] = (float(px_str[0]) + float(px_str[1])) / 2.0
 
     # return IFMMeasurement object with metadata
     return IFMMeasurement(**metadata)
