@@ -288,6 +288,7 @@ class IFMModel(Entity, EntryData):
         #         merge_sections(self, model, logger)
 
         super().normalize(archive, logger)
+        archive.metadata.entry_name = self.name
 
 
 class IFMMeasurementReference(EntityReference):
