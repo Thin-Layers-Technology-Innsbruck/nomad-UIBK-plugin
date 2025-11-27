@@ -218,10 +218,6 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         section_def=IFMModelReference,
         description='Model for the automated image analysis.',
     )
-    # model_classification = SubSection(
-    #     section_def=IFMModelReference,
-    #     description='Model for the automated image analysis.',
-    # )
 
     overwrite_existing_results = Quantity(
         type=bool,
@@ -360,17 +356,10 @@ class IFMTwoStepAnalysis(ELNAnalysis):
             archive.workflow2.inputs.append(  # type: ignore
                 Link(name='Binary Model', section=self.model.reference)
             )
-        # if self.model_classification:
-        #     archive.workflow2.inputs.append(  # type: ignore
-        #         Link(
-        #             name='Classification Model',
-        #             section=self.model_classification.reference,
-        #         )
-            # )
 
         # check if all necessary inputs are given
         if self.inputs and self.model:
-            logger.info('Two Models found. Ready for IFM Two Step Analysis.')
+            logger.info('Model found. Ready for IFM Two Step Analysis.')
 
             if self.trigger_run_action:
                 # remove subsections corresponding to previous runs
@@ -378,9 +367,6 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                 binary_source_path = self.find_source_path_from_ref(
                     self.model, '.pt'
                 )
-                # classification_source_path = self.find_source_path_from_ref(
-                #     self.model_classification, '.keras'
-                # )
                 input_data = InferenceInput(
                     upload_id=archive.metadata.upload_id,
                     user_id=archive.metadata.authors[0].user_id,
@@ -388,7 +374,6 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                     image_file_name=[],
                     pixel_size=[],
                     model_name=binary_source_path,
-                    # model_classification_name=classification_source_path,
                     csv_path=[],  # filled later inside the workflow
                     h5_path=[],
                     output_path=[],
@@ -427,7 +412,6 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                     self.outputs.append(
                         IFMTwoStepAnalysisResultReference(
                             name=input.name + '_inference_result',
-                            # action_id=action_id,
                         )
                     )
 

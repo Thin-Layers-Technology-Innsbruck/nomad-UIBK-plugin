@@ -20,6 +20,8 @@ with workflow.unsafe.imports_passed_through():
     )
 
 MAXIMUM_ATTEMPTS = 3
+TIMEOUT_LARGE = 3600
+TIMEOUT_SMALL = 300
 
 @workflow.defn
 class IFMInferenceWorkflow:
@@ -45,7 +47,7 @@ class IFMInferenceWorkflow:
                 image_after_masking_name = await workflow.execute_activity(
                     mask_image,
                     input_for_masking,
-                    start_to_close_timeout=timedelta(seconds=600),
+                    start_to_close_timeout=timedelta(seconds=TIMEOUT_LARGE),
                     retry_policy=RetryPolicy(
                         maximum_attempts=MAXIMUM_ATTEMPTS,
                     ),
@@ -54,7 +56,7 @@ class IFMInferenceWorkflow:
                 output_path, csv_path, h5_path = await workflow.execute_activity(
                     generate_paths,
                     image_after_masking_name,
-                    start_to_close_timeout=timedelta(seconds=600),
+                    start_to_close_timeout=timedelta(seconds=TIMEOUT_SMALL),
                     retry_policy=RetryPolicy(
                         maximum_attempts=MAXIMUM_ATTEMPTS,
                     ),
@@ -73,19 +75,21 @@ class IFMInferenceWorkflow:
                     h5_path=data.h5_path[i],
                     output_path=data.output_path[i],
                     overwrite_existing_results=data.overwrite_existing_results,
+                    mask_input_images=data.mask_input_images,
                     save_resulting_image=data.save_resulting_image,
                 )
 
                 await workflow.execute_activity(
                     run_ifm_inference,
                     data_inference_run,
-                    start_to_close_timeout=timedelta(seconds=600),
+                    start_to_close_timeout=timedelta(seconds=TIMEOUT_LARGE),
                     retry_policy=RetryPolicy(
                         maximum_attempts=MAXIMUM_ATTEMPTS,
                     ),
                 )
 
                 input_for_writer = WriteArchiveInput(
+                    pixel_size=data.pixel_size[i],
                     csv_path=data.csv_path[i],
                     h5_path=data.h5_path[i],
                     output_path=data.output_path[i],
@@ -98,7 +102,7 @@ class IFMInferenceWorkflow:
                 result_path_this_input = await workflow.execute_activity(
                     read_file_and_write_archive,
                     input_for_writer,
-                    start_to_close_timeout=timedelta(seconds=60),
+                    start_to_close_timeout=timedelta(seconds=TIMEOUT_LARGE),
                     retry_policy=RetryPolicy(
                         maximum_attempts=MAXIMUM_ATTEMPTS,
                     ),
@@ -115,7 +119,7 @@ class IFMInferenceWorkflow:
             result_refs = await workflow.execute_activity(
                 process_new_files,
                 input_for_process,
-                start_to_close_timeout=timedelta(seconds=60),
+                start_to_close_timeout=timedelta(seconds=TIMEOUT_SMALL),
                 retry_policy=RetryPolicy(
                     maximum_attempts=MAXIMUM_ATTEMPTS,
                 ),

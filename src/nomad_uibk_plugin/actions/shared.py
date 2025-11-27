@@ -35,11 +35,13 @@ class ActivityInferenceInput:
     h5_path: str
     output_path: str
     overwrite_existing_results: bool
+    mask_input_images: bool
     save_resulting_image: bool
 
 
 @dataclass
 class WriteArchiveInput:
+    pixel_size: float
     csv_path: str
     h5_path: str
     output_path: str
