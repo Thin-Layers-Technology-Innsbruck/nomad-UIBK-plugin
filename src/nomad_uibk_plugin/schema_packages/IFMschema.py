@@ -364,9 +364,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
             if self.trigger_run_action:
                 # remove subsections corresponding to previous runs
                 self.outputs = []
-                binary_source_path = self.find_source_path_from_ref(
-                    self.model, '.pt'
-                )
+                binary_source_path = self.find_source_path_from_ref(self.model, '.pt')
                 input_data = InferenceInput(
                     upload_id=archive.metadata.upload_id,
                     user_id=archive.metadata.authors[0].user_id,

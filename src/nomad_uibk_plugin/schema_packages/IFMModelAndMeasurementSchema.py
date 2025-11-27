@@ -270,9 +270,7 @@ class IFMModel(Entity, EntryData):
         self.method = 'IFM Model'
 
         # find corresponding data files
-        source_name = (
-            re.sub(r'\.archive\.json$', '', archive.metadata.mainfile) + '.pt'
-        )
+        source_name = re.sub(r'\.archive\.json$', '', archive.metadata.mainfile) + '.pt'
 
         from nomad.processing.data import Entry
 

@@ -23,6 +23,7 @@ MAXIMUM_ATTEMPTS = 3
 TIMEOUT_LARGE = 3600
 TIMEOUT_SMALL = 300
 
+
 @workflow.defn
 class IFMInferenceWorkflow:
     @workflow.run
