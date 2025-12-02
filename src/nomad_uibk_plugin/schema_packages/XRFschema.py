@@ -28,10 +28,10 @@ if TYPE_CHECKING:
         BoundLogger,
     )
 
+from collections.abc import Callable
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
 )
 
 import numpy as np
