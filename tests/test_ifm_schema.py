@@ -29,7 +29,7 @@ def test_IFMModel():
     test_file = os.path.join(
         os.path.dirname(__file__), 'data', 'test_IFMModel.archive.json'
     )
-    setup_mongo()  # should not be needed, strange!
+    # setup_mongo()  # should not be needed, strange!
     entry_archive = parse(test_file)[0]
     normalize_all(entry_archive)
 
