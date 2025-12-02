@@ -21,7 +21,7 @@ from typing import (
     TYPE_CHECKING,
 )
 
-from nomad.actions.utils import get_action_result, get_action_status, start_action
+from nomad.actions.manager import get_action_result, get_action_status, start_action
 from nomad.app.v1.models.models import MetadataRequired
 from nomad.datamodel.data import ArchiveSection, EntryData
 from nomad.datamodel.metainfo.annotations import (
