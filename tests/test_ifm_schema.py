@@ -1,8 +1,8 @@
 import os.path
 
 from nomad.client import normalize_all, parse
-from nomad.infrastructure import setup_mongo
 
+# from nomad.infrastructure import setup_mongo
 from nomad_uibk_plugin.schema_packages.IFMschema import ureg
 
 
