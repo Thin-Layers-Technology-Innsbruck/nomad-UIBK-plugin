@@ -1,6 +1,6 @@
 {
     "data": {
-        "m_def": "nomad_uibk_plugin.schema_packages.IFMschema.IFMMeasurement",
+        "m_def": "nomad_uibk_plugin.schema_packages.IFMModelAndMeasurementSchema.IFMMeasurement",
         "name": "IFM Measurement of 20240829_A1-2",
         "datetime": "2025-01-24T15:24:36.336548+00:00",
         "method": "IFM Measurement",

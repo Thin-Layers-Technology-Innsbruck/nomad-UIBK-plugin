@@ -16,32 +16,37 @@
 # limitations under the License.
 #
 
-import os
+import re
 from typing import (
     TYPE_CHECKING,
 )
 
-import pandas as pd
-import plotly.graph_objs as go
+from nomad.actions.manager import get_action_result, get_action_status, start_action
+from nomad.app.v1.models.models import MetadataRequired
 from nomad.datamodel.data import ArchiveSection, EntryData
-from nomad.datamodel.metainfo.annotations import ELNAnnotation, ELNComponentEnum
+from nomad.datamodel.metainfo.annotations import (
+    ELNAnnotation,
+    ELNComponentEnum,
+    SectionProperties,
+)
 from nomad.datamodel.metainfo.basesections import (
     Entity,
     EntityReference,
 )
-from nomad.datamodel.metainfo.eln import ELNAnalysis, ELNMeasurement
-from nomad.datamodel.metainfo.plot import PlotlyFigure, PlotSection
+from nomad.datamodel.metainfo.eln import ELNAnalysis
+from nomad.datamodel.metainfo.plot import PlotSection
 from nomad.datamodel.metainfo.workflow import Link
-from nomad.metainfo import Datetime, MEnum, Quantity, SchemaPackage, Section, SubSection
-from nomad_measurements.utils import (
-    # create_archive,
-    # get_entry_id_from_file_name,
-    # get_reference,
-    merge_sections,
-)
+from nomad.metainfo import Quantity, SchemaPackage, Section, SubSection
+from nomad.processing.data import Entry
+from nomad.search import MetadataPagination, search
 from pint import UnitRegistry
 
+from nomad_uibk_plugin.actions.shared import InferenceInput
 from nomad_uibk_plugin.schema_packages import UIBKCategory
+from nomad_uibk_plugin.schema_packages.IFMModelAndMeasurementSchema import (
+    IFMMeasurementReference,
+    IFMModelReference,
+)
 from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
 
 if TYPE_CHECKING:
@@ -53,195 +58,89 @@ ureg = UnitRegistry()
 m_package = SchemaPackage()
 
 
-class IFMMeasurement(ELNMeasurement):
-    """
-    IFM Measurement entry.
-    """
+class DefectPrevalence(ArchiveSection):
+    name = Quantity(
+        type=str,
+        description='Type of defect',
+    )
+    prevalence = Quantity(
+        type=float,
+        description='Prevalence of a given type of defect',
+    )
 
+
+class IFMTwoStepAnalysisResult(Entity, PlotSection, EntryData):
     m_def = Section(
-        categories=[UIBKCategory],
-        label='IFM Measurement',
+        a_eln=ELNAnnotation(
+            properties=SectionProperties(
+                order=[
+                    'name',
+                    'file',
+                    'description',
+                    'datetime',
+                    'lab_id',
+                    'action_id',
+                    'image_masked',
+                    'figures',
+                    'sample',
+                    'defect_prevalence',
+                ]
+            )
+        ),
     )
 
-    image_file = Quantity(
+    file = Quantity(
         type=str,
-        description='File containing the microscopy image.',
+        description='File containing the data.',
         a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
     )
 
-    metadata_file = Quantity(
-        type=str,
-        description='File containing the measurement metadata.',
-        a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
-    )
-
-    # Overwrite sample references with UIBKSampleReference
-    samples = SubSection(
+    sample = SubSection(
         section_def=UIBKSampleReference,
         description="""
         A list of all the samples measured during the measurement.
         """,
-        repeats=True,
-    )
-    sample_id = Quantity(
-        type=str,
-        description='ID of the sample measured.',
-        a_eln=ELNAnnotation(component=ELNComponentEnum.StringEditQuantity),
-    )
-
-    # Metadata Quantities
-    start_time = Quantity(
-        type=Datetime,
-        description='The date and time when this process was started.',
-        a_eln=dict(label='start time'),  # component='DateTimeEditQuantity'
-    )
-
-    end_time = Quantity(
-        type=Datetime,
-        description='The date and time when this process was finished.',
-        a_eln=dict(label='end time'),
-    )
-
-    exposure_time = Quantity(
-        type=float,
-        description='Exposure time of the image.',
-        unit='second',
-        a_eln=ELNAnnotation(defaultDisplayUnit='µs'),
-    )
-
-    device = Quantity(
-        type=str,
-        description='Device used for the measurement.',
-        a_eln=dict(label='measurement device'),
-    )
-
-    magnification = Quantity(
-        type=float,
-        description='Magnification used for the measurement.',
-    )
-
-    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
-        """
-        Tasks in here:
-        - Read the metadata file and extract information from it.
-        - Update the sample references if lab_id is given.
-        """
-
-        self.method = 'IFM Measurement'
-
-        # Read metadata from file
-        if self.metadata_file is not None:
-            logger.info('Metadata file recognized. Parsing...')
-
-            from nomad_uibk_plugin.filereader.IFMreader import read_ifm_xml
-
-            with archive.m_context.raw_file(self.metadata_file) as file:
-                measurement = read_ifm_xml(file, archive, logger)
-                merge_sections(self, measurement, logger)
-
-        # Update sample references
-        if self.sample_id and not self.samples:
-            self.samples = [
-                UIBKSampleReference(name=self.sample_id, lab_id=self.sample_id)
-            ]
-        elif self.samples and not self.sample_id:
-            self.sample_id = self.samples[0].lab_id
-
-        # Update measurement name
-        if self.samples:
-            self.name = f'IFM Measurement of {self.samples[0].name}'
-
-        super().normalize(archive, logger)
-
-
-class IFMModel(Entity, EntryData):
-    """
-    Model for the automated image analysis.
-    """
-
-    m_def = Section(
-        categories=[UIBKCategory],
-        label='IFM Model',
-    )
-
-    file = Quantity(
-        type=str,
-        description='File containing the data.',
-        a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
-    )
-
-    # Metadata Quantities
-    type = Quantity(
-        type=MEnum('binary', 'classification'), description='Type of the model.'
-    )
-
-    number_of_layers = Quantity(
-        type=int,
-        description='Number of layers in the model.',
-    )
-
-    number_of_parameters = Quantity(
-        type=int,
-        description='Number of parameters in the model.',
-    )
-
-    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
-        """
-        Read the model file and extract the metadata.
-        """
-        super().normalize(archive, logger)
-        self.method = 'IFM Model'
-
-        if self.file is not None:
-            logger.info('Model file recognized. Parsing...')
-
-            from nomad_uibk_plugin.filereader.IFMreader import read_keras_metadata
-
-            with archive.m_context.raw_file(self.file, 'rb') as file:
-                model = read_keras_metadata(file, archive, logger)
-                merge_sections(self, model, logger)
-
-
-class DefectPrevalence(ArchiveSection):
-    whiskers = Quantity(
-        type=float,
-        description='Prevalence of whiskers.',
-    )
-    chipping = Quantity(
-        type=float,
-        description='Prevalence of chipping.',
-    )
-    scratch = Quantity(
-        type=float,
-        description='Prevalence of scratches.',
-    )
-    no_error = Quantity(
-        type=float,
-        description='Prevalence of no errors.',
-    )
-
-
-class IFMAnalysisResult(ArchiveSection):
-    file = Quantity(
-        type=str,
-        description='File containing the data.',
-        a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
     )
 
     defect_prevalence = SubSection(
         section_def=DefectPrevalence,
         description='Prevalence of defects in the image.',
+        repeats=True,
     )
 
+    action_id = Quantity(
+        type=str,
+        description='ID of the inference action.',
+    )
 
-class ImageReference(EntityReference):
+    image_masked = Quantity(
+        type=bool,
+        description="""
+        True if image was masked automatically during analysis within nomad, False if 
+        image was already masked before being uploaded.
+        """,
+        a_eln=ELNAnnotation(label='image masked during analysis'),
+    )
+
+    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+        super().normalize(archive, logger)
+        self.name = self.name.split('.')[0].replace('_', ' ')  # type: ignore
+        archive.metadata.entry_name = self.name
+
+
+class IFMTwoStepAnalysisResultReference(EntityReference):
     reference = Quantity(
-        type=IFMMeasurement,
-        description='Reference to the IFM measurement.',
+        type=IFMTwoStepAnalysisResult,
+        description='Reference to the IFM Two Step Analysis Result.',
         a_eln=ELNAnnotation(
             component='ReferenceEditQuantity',
             label='section reference',
         ),
+    )
+
+    action_id = Quantity(
+        type=str,
+        description='ID of the inference action.',
     )
 
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
@@ -252,25 +151,24 @@ class ImageReference(EntityReference):
             self.name = self.reference.name
 
 
-class ModelReference(EntityReference):
-    reference = Quantity(
-        type=IFMModel,
-        description='Reference to the IFM model.',
-        a_eln=ELNAnnotation(
-            component='ReferenceEditQuantity',
-            label='section reference',
-        ),
+class InferenceStatus(ArchiveSection):
+    """Section to fetch the status of an inference action."""
+
+    action_id = Quantity(
+        type=str,
+        description='ID of the nference action.',
+    )
+    status = Quantity(
+        type=str,
+        description='Status of the inference action.',
     )
 
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+        """Normalize the section to ensure it is ready for processing."""
         super().normalize(archive, logger)
 
-        # Update name
-        if self.reference and self.name is None:
-            self.name = self.reference.name
 
-
-class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
+class IFMTwoStepAnalysis(ELNAnalysis):
     """
     Automated image analysis entry.
     """
@@ -278,165 +176,268 @@ class IFMTwoStepAnalysis(ELNAnalysis, PlotSection):
     m_def = Section(
         categories=[UIBKCategory],
         label='IFM Two Step Analysis',
+        description='Form to run IFM inference actions from the ELN interface.',
+        a_eln=ELNAnnotation(
+            properties=SectionProperties(
+                order=[
+                    'name',
+                    'datetime',
+                    'overwrite_existing_results',
+                    'mask_input_images',
+                    'save_resulting_image',
+                    'add_all_inputs',
+                    'trigger_run_action',
+                    'trigger_get_status',
+                    'description',
+                    'lab_id',
+                    'location',
+                    'tags',
+                    'method',
+                    'inputs',
+                    'model',
+                    'steps',
+                    'analysis_identifiers',
+                    'triggered_inference',
+                    'outputs',
+                ]
+            )
+        ),
     )
 
     inputs = SubSection(
-        section_def=ImageReference,
+        section_def=IFMMeasurementReference,
         description='Input data for the automated image analysis.',
         repeats=True,
     )
     outputs = SubSection(
-        section_def=IFMAnalysisResult,
+        section_def=IFMTwoStepAnalysisResultReference,
         description='Output data from the automated image analysis.',
         repeats=True,
     )
-    model_binary = SubSection(
-        section_def=ModelReference,
-        description='Model for the automated image analysis.',
-    )
-    model_classification = SubSection(
-        section_def=ModelReference,
+    model = SubSection(
+        section_def=IFMModelReference,
         description='Model for the automated image analysis.',
     )
 
-    # Execution Quantity
-    perform_analysis = Quantity(
+    overwrite_existing_results = Quantity(
         type=bool,
         description=(
-            'Check box to trigger the automated image analysis after assigning '
-            'the measurement(s) and the two models.'
+            'If checked, the existing inference results csv files will be overwritten.'
+            'Otherwise, only images without corresponding outputs will be processed '
+            'anew, processing for the other entries will be using existing files'
         ),
         default=False,
         a_eln=ELNAnnotation(component=ELNComponentEnum.BoolEditQuantity),
     )
 
-    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+    mask_input_images = Quantity(
+        type=bool,
+        description=(
+            'If checked, attempt to mask the areas of the input image outside of '
+            'the actual sample. The masked image will be saved in the same upload.'
+        ),
+        default=False,
+        a_eln=ELNAnnotation(component=ELNComponentEnum.BoolEditQuantity),
+    )
+
+    save_resulting_image = Quantity(
+        type=bool,
+        description=(
+            'If checked, saves the image with the defects found as an overlay in '
+            'the same upload.'
+        ),
+        default=False,
+        a_eln=ELNAnnotation(component=ELNComponentEnum.BoolEditQuantity),
+    )
+
+    trigger_run_action = Quantity(
+        type=bool,
+        description='Starts an asynchronous action for running the inference.',
+        a_eln=ELNAnnotation(
+            component=ELNComponentEnum.ActionEditQuantity,
+            label='Run Inference Action',
+        ),
+    )
+
+    trigger_get_status = Quantity(
+        type=bool,
+        default=False,
+        description='Retrieve the current status of the inference action.',
+        a_eln=ELNAnnotation(
+            component=ELNComponentEnum.ActionEditQuantity,
+            label='Get Action Status',
+        ),
+    )
+
+    add_all_inputs = Quantity(
+        type=bool,
+        default=False,
+        description="""
+        Find and add all possible inputs (IFMMeasurement entries) in this upload. 
+        Replaces all previously added manually inputs. Adds no more than 100 entries.
+        """,
+        a_eln=ELNAnnotation(
+            component=ELNComponentEnum.ActionEditQuantity,
+            label='Add All IFMMeasurement Inputs',
+        ),
+    )
+
+    triggered_inference = SubSection(
+        section_def=InferenceStatus,
+        description='A section for storing the status of the triggered inference '
+        'action.',
+    )
+
+    def check_results(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+        if self.trigger_get_status and self.triggered_inference:
+            try:
+                status = get_action_status(
+                    self.triggered_inference.action_id,
+                    archive.metadata.authors[0].user_id,
+                )  # noqa: E501
+                if status:
+                    self.triggered_inference.status = status.name
+            except Exception as e:
+                logger.error(f'Error getting action status: {e}. ')
+
+            if self.triggered_inference.status == 'COMPLETED':
+                result_refs = get_action_result(
+                    self.triggered_inference.action_id,
+                    archive.metadata.authors[0].user_id,
+                )
+                for i, output in enumerate(self.outputs):
+                    output.reference = result_refs['refs'][i]
+
+        self.trigger_get_status = False
+
+    def find_source_path_from_ref(self, input_ref_subsection, extension):
+        ref = input_ref_subsection.m_to_dict()['reference']
+        upload_id = (re.search(r'uploads/(.*?)/archive', ref)).group(1)
+        entry_id = (re.search(r'archive/(.*?)#/data', ref)).group(1)
+        for entry in Entry.objects(upload_id=upload_id):  # type: ignore
+            if entry.entry_id == entry_id:
+                source_name = re.sub(r'\.archive\.json$', extension, entry.mainfile)
+                source_path = (
+                    f'.volumes/fs/staging/{upload_id[0:2]}/{upload_id}'
+                    + f'/raw/{source_name}'
+                )
+                break
+        return source_path
+
+    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):  # noqa: PLR0912
         super().normalize(archive, logger)
         self.method = 'IFM Two Step Analysis'
 
-        # workflow linking
-        if self.model_binary:
-            archive.workflow2.inputs.append(
-                Link(name='Binary Model', section=self.model_binary.reference)
+        # link IFMMeasurements automatically
+        if self.add_all_inputs:
+            self.add_all_inputs = False
+            self.inputs = []
+            query = {
+                'entry_type': 'IFMMeasurement',
+                'upload_id': archive.metadata.upload_id,
+            }
+            search_result = search(
+                owner='all',
+                query=query,
+                pagination=MetadataPagination(page_size=100),
+                user_id=archive.metadata.main_author.user_id,  # pyright: ignore
+                required=MetadataRequired(include=['entry_id', 'entry_name']),
             )
-        if self.model_classification:
-            archive.workflow2.inputs.append(
-                Link(
-                    name='Classification Model',
-                    section=self.model_classification.reference,
+            for entry in search_result.data:
+                self.inputs.append(
+                    IFMMeasurementReference(
+                        name=entry['entry_name'],
+                        reference=f'../uploads/{archive.metadata.upload_id}/archive/{entry["entry_id"]}#/data',
+                    )
                 )
+
+        # archive workflow linking
+        if self.model:
+            archive.workflow2.inputs.append(  # type: ignore
+                Link(name='Binary Model', section=self.model.reference)
             )
 
         # check if all necessary inputs are given
-        if self.inputs and self.model_binary and self.model_classification:
-            logger.info('Two Models found. Ready for IFM Two Step Analysis.')
+        if self.inputs and self.model:
+            logger.info('Model found. Ready for IFM Two Step Analysis.')
 
-            self.outputs = []
-            for input in self.inputs:
-                # here we execute Georgs code to extract the defects
-                with (
-                    archive.m_context.raw_file(
-                        input.reference.image_file
-                    ) as image_file,
-                    archive.m_context.raw_file(
-                        self.model_binary.reference.file
-                    ) as model_binary,
-                    archive.m_context.raw_file(
-                        self.model_classification.reference.file
-                    ) as model_classiciation,
-                ):
-                    # create paths and names for the csv file and archive file
-                    path, filename_with_ext = os.path.split(image_file.name)
-                    filename, ext = os.path.splitext(filename_with_ext)
-                    csv_path = os.path.join(path, f'{filename}_prediction.csv')
-                    # csv_archive_name = f'{filename}_prediction.archive.json'
+            if self.trigger_run_action:
+                # remove subsections corresponding to previous runs
+                self.outputs = []
+                binary_source_path = self.find_source_path_from_ref(self.model, '.pt')
+                input_data = InferenceInput(
+                    upload_id=archive.metadata.upload_id,
+                    user_id=archive.metadata.authors[0].user_id,
+                    sample_id=[],
+                    image_file_name=[],
+                    pixel_size=[],
+                    model_name=binary_source_path,
+                    csv_path=[],  # filled later inside the workflow
+                    h5_path=[],
+                    output_path=[],
+                    overwrite_existing_results=self.overwrite_existing_results,
+                    mask_input_images=self.mask_input_images,
+                    save_resulting_image=self.save_resulting_image,
+                )
 
-                    # perform the analysis if the csv file does not yet exist and
-                    # the user has checked the box
-                    if self.perform_analysis and not os.path.exists(csv_path):
-                        logger.info('Extracting defects...')
-                        from ifm_image_defect_detection.defectRecognition_toCSV import (
-                            defect_recognition,
+                # create input data for the inference action
+                for input in self.inputs:
+                    # check that input has sample associated with it
+                    if not input.reference:
+                        logger.warning(
+                            f'Input reference is missing for input {input.name}.'
+                            + 'This input will be ignored.'
                         )
-
-                        defect_recognition(
-                            image_file.name, model_binary.name, model_classiciation.name
-                        )
-
-                    if not os.path.exists(csv_path):
-                        logger.warn(
-                            'The csv file does not exist. Please (re)run the analysis '
-                            'by checking "perform analysis" (again).'
+                        continue
+                    if (
+                        not input.reference.samples
+                        or not input.reference.samples[0].lab_id
+                    ):
+                        logger.warning(
+                            f'No sample found for input {input.name}.'
+                            + 'This input will be ignored.'
                         )
                         continue
 
-                    # create result subsection
-                    analysis_entry = IFMAnalysisResult(file=csv_path)
+                    image_source_path = self.find_source_path_from_ref(input, '.bmp')
 
-                    # read csv file and extract the defect prevalence
-                    defect_data = pd.read_csv(csv_path, skiprows=2)
-                    defect_columns = ['Whiskers', 'Chipping', 'Scratch', 'No Error']
-                    defect_data['type'] = defect_data[defect_columns].idxmax(axis=1)
-                    relative_share = defect_data['type'].value_counts(normalize=True)
-
-                    analysis_entry.defect_prevalence = DefectPrevalence(
-                        whiskers=relative_share.get('Whiskers', 0),
-                        chipping=relative_share.get('Chipping', 0),
-                        scratch=relative_share.get('Scratch', 0),
-                        no_error=relative_share.get('No Error', 0),
-                    )
-
-                    # add the result to the analysis output and update the workflow
-                    self.outputs.append(analysis_entry)
-                    archive.workflow2.outputs.append(
-                        Link(
-                            name='Extracted Features',
-                            section=analysis_entry,
+                    input_data.sample_id.append(input.reference.samples[0].lab_id)
+                    input_data.image_file_name.append(image_source_path)
+                    input_data.csv_path.append('')
+                    input_data.h5_path.append('')
+                    input_data.output_path.append('')
+                    input_data.pixel_size.append(input.reference.pixel_size.magnitude)
+                    self.outputs.append(
+                        IFMTwoStepAnalysisResultReference(
+                            name=input.name + '_inference_result',
                         )
                     )
 
-                    # create plot
-                    defect_mapping = {
-                        'Whiskers': 1,
-                        'Chipping': 2,
-                        'Scratch': 3,
-                        'No Error': 4,
-                    }
-                    defect_data['label'] = defect_data['type'].map(defect_mapping)
+                # 'unclick' buttons
+                self.trigger_run_action = False
+                self.overwrite_existing_results = False
 
-                    heatmap = go.Heatmap(
-                        x=defect_data['x'],
-                        y=defect_data['y'],
-                        z=defect_data['label'],
-                        colorscale='Viridis',
-                        colorbar=dict(
-                            tickvals=[1, 2, 3, 4],
-                            ticktext=defect_columns,
-                            title='Defect Type',
-                        ),
+                # Execute action that runs Georgs code to extract the defects
+                # and creates results entries
+                try:
+                    action_id = start_action(
+                        action_id='nomad_uibk_plugin.actions:ifm_inference',
+                        data=input_data,
                     )
-
-                    figure = go.Figure(data=heatmap)
-                    figure.update_layout(
-                        title='Heatmap of Defect Distribution',
-                        xaxis_title='X Position',
-                        yaxis_title='Y Position',
-                        xaxis=dict(scaleanchor='y'),
-                        yaxis=dict(scaleanchor='x'),
-                        autosize=True,
+                    self.triggered_inference = InferenceStatus(
+                        action_id=action_id, status='RUNNING'
                     )
+                except Exception as e:
+                    logger.error(f'Error running action: {e}')
 
-                    figure_json = figure.to_plotly_json()
-                    figure_json['config'] = {'staticPlot': True}
-                    self.figures.append(
-                        PlotlyFigure(
-                            label='Defect Distribution Heatmap',
-                            index=0,
-                            figure=figure_json,
-                        )
-                    )
+        elif self.model:
+            logger.warning(
+                'No inputs to process have been found. IFM analysis aborted.'
+            )
+        else:
+            logger.warning('No Models have been found. IFM analysis aborted.')
 
-            self.perform_analysis = False
+        self.check_results(archive=archive, logger=logger)
 
 
 m_package.__init_metainfo__()

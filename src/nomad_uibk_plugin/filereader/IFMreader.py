@@ -22,9 +22,11 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import TYPE_CHECKING, TextIO
 
-import tensorflow as tf
-
-from nomad_uibk_plugin.schema_packages.IFMschema import IFMMeasurement, IFMModel, ureg
+from nomad_uibk_plugin.schema_packages.IFMModelAndMeasurementSchema import (
+    IFMMeasurement,
+    # IFMModel,
+)
+from nomad_uibk_plugin.schema_packages.IFMschema import ureg
 
 if TYPE_CHECKING:
     from nomad.datamodel.datamodel import EntryArchive
@@ -55,13 +57,19 @@ def read_ifm_xml(
     # parse other XML fields
     sample_id = root.find('.//generalData/name').text
     if sample_id:
-        metadata['sample_id'] = sample_id
+        # metadata['sample_id'] = sample_id
+        metadata['samples'] = [{'lab_id': sample_id}]
     device = root.find('.//generalData/deviceName').text
     if device:
-        metadata['device'] = device
+        metadata['instruments'] = [{'name': device}]
     magnification = root.find('.//ifmData/magnification').text
     if magnification:
         metadata['magnification'] = float(magnification)
+    pixel_vector = root.find('.//generalCalibrationData/pixelsize/vector')
+    if pixel_vector is not None:
+        px_str = pixel_vector.text.strip().split()
+        if len(px_str) > 1:
+            metadata['pixel_size'] = (float(px_str[0]) + float(px_str[1])) / 2.0
 
     # return IFMMeasurement object with metadata
     return IFMMeasurement(**metadata)
@@ -93,42 +101,42 @@ def parse_description_field(description: str) -> dict:
     return metadata
 
 
-def read_keras_metadata(
-    file_obj: TextIO, archive: 'EntryArchive', logger: 'BoundLogger'
-) -> IFMModel:
-    """
-    Reads the metadata from the Keras model file and returns an IFMModel object.
-    """
+# def read_keras_metadata(
+#     file_obj: TextIO, archive: 'EntryArchive', logger: 'BoundLogger'
+# ) -> IFMModel:
+#     """
+#     Reads the metadata from the Keras model file and returns an IFMModel object.
+#     """
 
-    params = {
-        'name': None,
-        'type': None,
-        'datetime': None,
-        'number_of_layers': None,
-        'number_of_parameters': None,
-    }
+#     params = {
+#         'name': None,
+#         'type': None,
+#         'datetime': None,
+#         'number_of_layers': None,
+#         'number_of_parameters': None,
+#     }
 
-    # extract metadata from file name
-    date = re.search(r'(\d{4})(\d{2})(\d{2})', file_obj.name)
-    if date:
-        year, month, day = date.groups()
-        params['datetime'] = datetime(int(year), int(month), int(day))
+#     # extract metadata from file name
+#     date = re.search(r'(\d{4})(\d{2})(\d{2})', file_obj.name)
+#     if date:
+#         year, month, day = date.groups()
+#         params['datetime'] = datetime(int(year), int(month), int(day))
 
-    if 'binary' in file_obj.name.lower():
-        params['name'] = 'Binary IFM Model'
-        params['type'] = 'binary'
-    elif 'classification' in file_obj.name.lower():
-        params['name'] = 'Classification IFM Model'
-        params['type'] = 'classification'
+#     if 'binary' in file_obj.name.lower():
+#         params['name'] = 'Binary IFM Model'
+#         params['type'] = 'binary'
+#     elif 'classification' in file_obj.name.lower():
+#         params['name'] = 'Classification IFM Model'
+#         params['type'] = 'classification'
 
-    # load the model and extract metadata
-    try:
-        model = tf.keras.models.load_model(file_obj.name)
-        params['number_of_layers'] = len(model.layers)
-        params['number_of_parameters'] = model.count_params()
+#     # load the model and extract metadata
+#     try:
+#         model = tf.keras.models.load_model(file_obj.name)
+#         params['number_of_layers'] = len(model.layers)
+#         params['number_of_parameters'] = model.count_params()
 
-    except Exception as e:
-        logger.error(f'Could not load the model: {e}')
-        return None
+#     except Exception as e:
+#         logger.error(f'Could not load the model: {e}')
+#         return None
 
-    return IFMModel(**params)
+#     return IFMModel(**params)
