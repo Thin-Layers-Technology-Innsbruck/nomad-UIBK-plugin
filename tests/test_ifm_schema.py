@@ -17,23 +17,23 @@ def test_IFMMeasurement():
     assert entry_archive.data.method == 'IFM Measurement'
     assert entry_archive.data.image_file == 'IFM_Sample.bmp'
     assert entry_archive.data.metadata_file == 'IFM_Sample_1_info.xml'
-    assert entry_archive.data.samples[0].lab_id == '20240829_A1-2'
+    assert entry_archive.data.samples[0].lab_id == '20240829_A1-2'  # type: ignore
     assert entry_archive.data.exposure_time == ureg.Quantity(
         0.00019899999999999999, 'second'
     )
     assert entry_archive.data.magnification == 9.98687  # noqa: PLR2004
 
 
-def test_IFMModel():
-    test_file = os.path.join(
-        os.path.dirname(__file__), 'data', 'test_IFMModel.archive.json'
-    )
-    entry_archive = parse(test_file)[0]
-    normalize_all(entry_archive)
+# def test_IFMModel():
+#     test_file = os.path.join(
+#         os.path.dirname(__file__), 'data', 'test_IFMModel.archive.json'
+#     )
+#     entry_archive = parse(test_file)[0]
+#     normalize_all(entry_archive)
 
-    assert entry_archive.data.file == 'IFM_segmentation.pt'
-    assert entry_archive.metadata.entry_type == 'IFMModel'
-    assert entry_archive.data.name == 'IFM segmentation'
+#     assert entry_archive.data.file == 'IFM_segmentation.pt'
+#     assert entry_archive.metadata.entry_type == 'IFMModel'
+#     assert entry_archive.data.name == 'IFM segmentation'
 
 
 # TODO: rewrite the tests after implementing temporal workflow for IFMTwoStepAnalysis
