@@ -34,7 +34,6 @@ from nomad.datamodel.metainfo.basesections import (
 )
 from nomad.datamodel.metainfo.eln import ELNMeasurement
 from nomad.metainfo import Datetime, MEnum, Quantity, SchemaPackage, Section, SubSection
-from nomad.search import MetadataPagination, search
 from nomad_measurements.utils import create_archive, merge_sections
 from pint import UnitRegistry
 
@@ -184,6 +183,8 @@ class IFMMeasurement(ELNMeasurement):
         # Update sample references
         for sample in self.samples:
             if sample.lab_id and not sample.reference:
+                from nomad.search import MetadataPagination, search
+
                 query = {'results.eln.lab_ids': sample.lab_id}
                 search_result = search(
                     owner='all',
