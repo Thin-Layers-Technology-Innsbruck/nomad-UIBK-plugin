@@ -7,7 +7,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -23,7 +22,6 @@ authors = [
     { name = "Lev Ginzburg", email = "lev.ginzburg@physik.hu-berlin.de" },
 ]
 maintainers = [
-    { name = "Fabian Schöppach", email = "fabian.schoeppach@physik.hu-berlin.de" },
     { name = "Lev Ginzburg", email = "lev.ginzburg@physik.hu-berlin.de" },
 ]
 license = { file = "LICENSE" }
@@ -39,6 +37,7 @@ dependencies = [
 Repository = "https://github.com/Thin-Layers-Technology-Innsbruck/nomad-UIBK-plugin"
 
 [tool.uv]
+prerelease = "allow"  # Allows pre-release/dev versions
 index-url = "https://gitlab.mpcdf.mpg.de/api/v4/projects/2187/packages/pypi/simple"
 
 [project.optional-dependencies]
@@ -130,6 +129,10 @@ package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.cruft]
+# Avoid updating workflow files, this leads to permissions issues
+skip = [".github/*"]
 
 [project.entry-points.'nomad.plugin']
 # schema
