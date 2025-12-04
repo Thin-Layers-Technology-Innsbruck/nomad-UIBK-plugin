@@ -31,9 +31,7 @@ dependencies = [
     "nomad-lab[infrastructure]>=1.4.0",
     "nomad-measurements>=1.3.0",
     "nomad-material-processing>=0.0.10",
-    "ifm-imagesegmentation @ git+https://github.com/csav1974/IFM-ImageSegmentation.git@v0.1.0",
     "pandas",
-    "scikit-image",
     "plotly",
 ]
 
@@ -44,7 +42,17 @@ Repository = "https://github.com/Thin-Layers-Technology-Innsbruck/nomad-UIBK-plu
 index-url = "https://gitlab.mpcdf.mpg.de/api/v4/projects/2187/packages/pypi/simple"
 
 [project.optional-dependencies]
-dev = ["ruff", "pytest", "structlog"]
+analytics = [
+    "ifm-imagesegmentation @ git+https://github.com/csav1974/IFM-ImageSegmentation.git@v0.1.0",
+    "scikit-image",
+]
+dev = [
+    "nomad-uibk-plugin[analytics]",
+    "ruff",
+    "pytest",
+    "structlog",
+]
+cpu-action = ["nomad-uibk-plugin[analytics]"]
 
 [tool.setuptools_scm]
 
