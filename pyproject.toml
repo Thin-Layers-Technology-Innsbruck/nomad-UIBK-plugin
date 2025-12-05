@@ -43,7 +43,7 @@ index-url = "https://gitlab.mpcdf.mpg.de/api/v4/projects/2187/packages/pypi/simp
 
 [project.optional-dependencies]
 analytics = [
-    "ifm-imagesegmentation[opencv-headless] @ git+https://github.com/csav1974/IFM-ImageSegmentation.git@main",
+    "ifm-imagesegmentation @ git+https://github.com/csav1974/IFM-ImageSegmentation.git@main",
     "scikit-image",
     "imageio",
 ]
