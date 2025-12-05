@@ -32,6 +32,8 @@ dependencies = [
     "pandas",
     "plotly",
     "pillow",
+    "opencv-python-headless",
+    "opencv-python==0",
 ]
 
 [project.urls]
@@ -40,9 +42,6 @@ Repository = "https://github.com/Thin-Layers-Technology-Innsbruck/nomad-UIBK-plu
 [tool.uv]
 prerelease = "allow"  # Allows pre-release/dev versions
 index-url = "https://gitlab.mpcdf.mpg.de/api/v4/projects/2187/packages/pypi/simple"
-
-[tool.uv.sources]
-opencv-python = { version = "0", index = "pypi" }    #for use with docker / use opencv-python-headless instead
 
 [project.optional-dependencies]
 analytics = [
