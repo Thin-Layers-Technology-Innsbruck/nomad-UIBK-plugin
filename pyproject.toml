@@ -31,7 +31,7 @@ dependencies = [
     "nomad-material-processing>=0.0.10",
     "pandas",
     "plotly",
-    "imageio",
+    "pillow",
 ]
 
 [project.urls]
@@ -45,6 +45,7 @@ index-url = "https://gitlab.mpcdf.mpg.de/api/v4/projects/2187/packages/pypi/simp
 analytics = [
     "ifm-imagesegmentation @ git+https://github.com/csav1974/IFM-ImageSegmentation.git@v0.1.0",
     "scikit-image",
+    "imageio",
 ]
 dev = [
     "nomad-uibk-plugin[analytics]",
