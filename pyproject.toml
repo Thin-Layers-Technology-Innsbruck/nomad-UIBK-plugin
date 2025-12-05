@@ -32,8 +32,6 @@ dependencies = [
     "pandas",
     "plotly",
     "pillow",
-    "opencv-python-headless",
-    "opencv-python==0",
 ]
 
 [project.urls]
