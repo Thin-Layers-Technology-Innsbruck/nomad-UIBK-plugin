@@ -4,17 +4,13 @@ import re
 import time
 
 import h5py
-import imageio
 import numpy as np
 import plotly.graph_objs as go
-from ifm_imagesegmentation.inference import run_image_segmentation
 from nomad.app.v1.routers.uploads import get_upload_with_read_access
 from nomad.datamodel import User
 from nomad.datamodel.metainfo.plot import PlotlyFigure
 from nomad.processing.data import Entry
 from PIL import Image
-from skimage import color, feature, io
-from skimage.transform import hough_circle, hough_circle_peaks
 from temporalio import activity
 
 from nomad_uibk_plugin.actions.shared import (
@@ -36,7 +32,11 @@ LONG_SIDE_PLOT = 512  # approximate value due to int operations
 
 
 @activity.defn
-def mask_image(masking_data: MaskingInput):
+def mask_image(masking_data: MaskingInput):  # noqa: PLR0915
+    import imageio
+    from skimage import color, feature, io
+    from skimage.transform import hough_circle, hough_circle_peaks
+
     input_path = masking_data.input_path
     if masking_data.mask_input_images:
         index = input_path.rfind('/')
@@ -118,6 +118,8 @@ def generate_paths(image_path: str):
 
 @activity.defn
 def run_ifm_inference(data: ActivityInferenceInput):
+    from ifm_imagesegmentation.inference import run_image_segmentation
+
     if (not os.path.exists(data.csv_path)) or data.overwrite_existing_results:
         activity.logger.info('Extracting defects...')
         run_image_segmentation(
