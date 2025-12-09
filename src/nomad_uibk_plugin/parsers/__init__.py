@@ -78,3 +78,22 @@ ifmmodelparser = IFMModelParserEntryPoint(
     description='IFM Model Parser for keras files.',
     mainfile_name_re=r'.*/IFM_.*\.pt',
 )
+
+
+class JVParserEntryPoint(ParserEntryPoint):
+    """
+    IFM Parser plugin entry point.
+    """
+
+    def load(self):
+        # lazy import to avoid circular dependencies
+        from nomad_uibk_plugin.parsers.JVparser import JVParser
+
+        return JVParser(**self.model_dump())
+
+
+jvjsonparser = JVParserEntryPoint(
+    name='JVParser',
+    description='JV Parser for json files with JV solar cell measurements.',
+    mainfile_name_re=r'.*/JV_(?!.*\.archive\.json$).*\.json$',
+)
