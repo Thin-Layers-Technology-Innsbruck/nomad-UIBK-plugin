@@ -91,7 +91,6 @@ class UIBK_JVMeasurement(JVMeasurement, EntryData):
         #     if entry.mainfile == source_name:
         #         self.files = File(data_files=[source_name])
 
-
         # Update sample references
         for sample in self.samples:
             if sample.lab_id and not sample.reference:
