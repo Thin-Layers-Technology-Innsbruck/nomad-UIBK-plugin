@@ -49,16 +49,16 @@ class JVParser(MatchingParser):
         logger: 'BoundLogger',
     ) -> None:
         logger.info('JVParser.parse')
-        data_file = mainfile.split('/raw/')[-1]
         archive.metadata.entry_type = 'RawJVMeasurementFile'
-        entry = UIBK_JVMeasurement.m_from_dict(UIBK_JVMeasurement.m_def.a_template)  # pyright: ignore[reportArgumentType]
 
         with open(mainfile) as file:
             source_json = json.load(file)
-            source_data = source_json['dataStorage']['data']
+
+        entries = []
+        for measurement in source_json:
+            source_data = measurement['dataStorage']['data']
             split_label = re.compile(r'^(.*)_(\d+)$').match(source_data['label'])
-        entry.jv_curves = [
-            SolarCellJVCurve(
+            jv_curve = SolarCellJVCurve(
                 label_name=source_data['measurementInfo']['lightId'],
                 datetime=source_data['measurementInfo']['lightTime'],
                 cell_id=split_label.group(2),  # pyright: ignore[reportOptionalMemberAccess]
@@ -80,10 +80,8 @@ class JVParser(MatchingParser):
                 * 100,  # conversion to mA/cm^2
                 series_resistance=source_data['rs'],
                 shunt_resistance=source_data['rp'],
-            ),
-        ]
-        entry.dark_jv_curves = [
-            SolarCellJVCurveDark(
+            )
+            dark_jv_curve = SolarCellJVCurveDark(
                 label_name=source_data['measurementInfo']['darkId'],
                 datetime=source_data['measurementInfo']['darkTime'],
                 cell_id=split_label.group(2),  # pyright: ignore[reportOptionalMemberAccess]
@@ -96,20 +94,38 @@ class JVParser(MatchingParser):
                 voltage=source_data['calculationValues']['uDark'],
                 series_resistance=source_data['darkRs'],
                 shunt_resistance=source_data['darkRp'],
-            ),
-        ]
-        entry.samples = [
-            UIBKSampleReference(
-                lab_id=split_label.group(1),  # pyright: ignore[reportOptionalMemberAccess]
-                position=split_label.group(2),  # pyright: ignore[reportOptionalMemberAccess]
             )
-        ]
 
-        file_str = ''.join(data_file.split('.')[:-1])
-        file_name = f'{file_str}.archive.json'
-        create_archive(
-            entity=entry,
-            archive=archive,
-            file_name=file_name,
-            overwrite=True,
-        )
+            entry_old_found = False
+            for entry_old in entries:
+                if split_label.group(1) == entry_old.samples[0].lab_id:  # pyright: ignore[reportOptionalMemberAccess]
+                    entry_old.jv_curves.append(jv_curve)
+                    entry_old.dark_jv_curves.append(dark_jv_curve)
+                    entry_old.samples[0].position = entry_old.samples[0].position + (
+                        f', {split_label.group(2)}' # pyright: ignore[reportOptionalMemberAccess]
+                    )
+                    entry_old_found = True
+                    break
+
+            if not (entry_old_found):
+                entry = UIBK_JVMeasurement.m_from_dict(
+                    UIBK_JVMeasurement.m_def.a_template  # pyright: ignore[reportArgumentType]
+                )
+                entry.jv_curves = [jv_curve]
+                entry.dark_jv_curves = [dark_jv_curve]
+                entry.samples = [
+                    UIBKSampleReference(
+                        lab_id=split_label.group(1),  # pyright: ignore[reportOptionalMemberAccess]
+                        position=split_label.group(2),  # pyright: ignore[reportOptionalMemberAccess]
+                    )
+                ]
+                entries.append(entry)
+
+        for entry in entries:
+            file_name = f'JV_{entry.samples[0].lab_id}.archive.json'
+            create_archive(
+                entity=entry,
+                archive=archive,
+                file_name=file_name,
+                overwrite=True,
+            )

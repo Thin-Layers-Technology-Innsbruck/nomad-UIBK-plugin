@@ -203,6 +203,10 @@ class UIBKSampleReference(Object):
         ),
     )
 
+    position = Quantity(
+        type=str, a_eln=dict(component='StringEditQuantity')
+    )
+
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
         super().normalize(archive, logger)
 
