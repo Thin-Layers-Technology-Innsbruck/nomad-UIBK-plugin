@@ -23,11 +23,12 @@ from typing import (
 
 from nomad.datamodel.data import EntryData
 from nomad.metainfo import SchemaPackage, Section
-from nomad_pvcomb.schema_packages.activities import File
+from nomad_measurements.utils import create_archive
 from nomad_pvcomb.schema_packages.processes import JVMeasurement
 from pint import UnitRegistry
 
 from nomad_uibk_plugin.schema_packages import UIBKCategory
+from nomad_uibk_plugin.schema_packages.sample import UIBKSample
 
 if TYPE_CHECKING:
     from nomad.datamodel import EntryArchive
@@ -83,13 +84,55 @@ class UIBK_JVMeasurement(JVMeasurement, EntryData):
         """
 
         # find corresponding data files
-        source_name = re.sub(r'\.archive\.json$', '.json', archive.metadata.mainfile)  # type: ignore
+        # source_name = re.sub(r'\.archive\.json$', '.json', archive.metadata.mainfile)  # type: ignore
 
-        from nomad.processing.data import Entry
+        # from nomad.processing.data import Entry
 
-        for entry in Entry.objects(upload_id=archive.metadata.upload_id):  # type: ignore
-            if entry.mainfile == source_name:
-                self.files = File(data_files=[source_name])
+        # for entry in Entry.objects(upload_id=archive.metadata.upload_id):  # type: ignore
+        #     if entry.mainfile == source_name:
+        #         self.files = File(data_files=[source_name])
+
+
+        # Update sample references
+        for sample in self.samples:
+            if sample.lab_id and not sample.reference:
+                from nomad.search import MetadataPagination, search
+
+                query = {'results.eln.lab_ids': sample.lab_id}
+                search_result = search(
+                    owner='all',
+                    query=query,
+                    pagination=MetadataPagination(page_size=1),
+                    user_id=archive.metadata.main_author.user_id,
+                )
+                if search_result.pagination.total == 0:
+                    new_sample = UIBKSample(lab_id=sample.lab_id)
+                    sample_file_name = f'Sample_{sample.lab_id}.archive.json'
+                    sample_ref = create_archive(
+                        entity=new_sample,
+                        archive=archive,
+                        file_name=sample_file_name,
+                        overwrite=False,
+                    )
+                else:
+                    entry_id = search_result.data[0]['entry_id']
+                    upload_id = search_result.data[0]['upload_id']
+                    sample_ref = f'../uploads/{upload_id}/archive/{entry_id}#data'
+                    try:
+                        sample_file_name = search_result.data[0]['results']['eln'][
+                            'names'
+                        ][0]
+                    except Exception as e:
+                        sample_file_name = sample.lab_id
+                        logger.warn(
+                            f'Found no sample name, using sample id instead: {e}'
+                        )
+                    if search_result.pagination.total > 1:
+                        logger.warn(
+                            f'Found {search_result.pagination.total} entries with '
+                            f'lab_id: "{sample.lab_id}". Will use the first one found.'
+                        )
+                sample.name = sample_file_name
+                sample.reference = sample_ref
 
         super().normalize(archive, logger)
-        # archive.metadata.entry_name = self.name

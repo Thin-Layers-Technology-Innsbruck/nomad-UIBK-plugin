@@ -6,12 +6,10 @@ from nomad.datamodel.data import (
     EntryData,
 )
 from nomad.datamodel.metainfo.annotations import ELNAnnotation, ELNComponentEnum
-from nomad.datamodel.metainfo.basesections import (
-    CompositeSystem,
-    CompositeSystemReference,
-)
+from nomad.datamodel.metainfo.basesections import CompositeSystem
 from nomad.datamodel.metainfo.plot import PlotlyFigure, PlotSection
 from nomad.metainfo import Quantity, SchemaPackage, Section, SubSection
+from nomad_pvcomb.schema_packages.activities import Object
 
 from nomad_uibk_plugin.schema_packages import UIBKCategory
 
@@ -191,7 +189,7 @@ class UIBKSampleWithArray(UIBKSample, PlotSection):
         return x_values, y_values
 
 
-class UIBKSampleReference(CompositeSystemReference):
+class UIBKSampleReference(Object):
     """
     Reference section to an UIBK sample.
     """
