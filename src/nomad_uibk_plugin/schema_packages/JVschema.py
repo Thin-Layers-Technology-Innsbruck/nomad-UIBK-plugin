@@ -16,7 +16,6 @@
 # limitations under the License.
 #
 
-import re
 from typing import (
     TYPE_CHECKING,
 )
@@ -84,11 +83,11 @@ class UIBK_JVMeasurement(JVMeasurement, EntryData):
         """
 
         # find corresponding data files
-        # source_name = re.sub(r'\.archive\.json$', '.json', archive.metadata.mainfile)  # type: ignore
+        # source_name = re.sub(r'\.archive\.json$', '.json', archive.metadata.mainfile)
 
         # from nomad.processing.data import Entry
 
-        # for entry in Entry.objects(upload_id=archive.metadata.upload_id):  # type: ignore
+        # for entry in Entry.objects(upload_id=archive.metadata.upload_id):
         #     if entry.mainfile == source_name:
         #         self.files = File(data_files=[source_name])
 
