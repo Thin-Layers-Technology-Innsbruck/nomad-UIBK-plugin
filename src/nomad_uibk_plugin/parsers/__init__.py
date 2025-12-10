@@ -95,5 +95,5 @@ class JVParserEntryPoint(ParserEntryPoint):
 jvjsonparser = JVParserEntryPoint(
     name='JVParser',
     description='JV Parser for json files with JV solar cell measurements.',
-    mainfile_name_re=r'.*/JV_(?!.*\.archive\.json$).*\.json$',
+    mainfile_name_re=r'.*export(?!.*\.archive\.json$).*\.json$',
 )
