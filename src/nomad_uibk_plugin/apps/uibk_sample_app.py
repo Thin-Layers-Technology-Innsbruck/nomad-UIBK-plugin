@@ -5,6 +5,7 @@ from nomad.config.models.ui import (
     Column,
     Menu,
     MenuItemHistogram,
+    MenuItemOption,
     MenuItemTerms,
     MenuSizeEnum,
     ScaleEnum,
@@ -34,6 +35,21 @@ uibk_sample_app = App(
             selected=True,
             title='Sample ID',
         ),
+        Column(
+            search_quantity=f'data.activities_performed.jv_measurement[*].name#{schema}',
+            selected=True,
+            title='JV measurements performed',
+        ),
+        Column(
+            search_quantity=f'data.activities_performed.ifm_measurement[*].name#{schema}',
+            selected=True,
+            title='IFM measurements performed',
+        ),
+        Column(
+            search_quantity=f'data.activities_performed.ifm_analysis[*].name#{schema}',
+            selected=True,
+            title='IFM analysis performed',
+        ),
         Column(search_quantity='entry_name', title='Name'),
         Column(search_quantity='entry_type'),
         Column(search_quantity='upload_create_time', title='Upload time'),
@@ -56,6 +72,22 @@ uibk_sample_app = App(
                         title='Sample ID',
                         options=10,
                     ),
+                    # MenuItemTerms(
+                    #     title='Types of activities performed',
+                    #     search_quantity='search_quantities.path_archive',
+                    #     options={
+                    #         'data.activities_performed.jv_measurement.0.name': MenuItemOption(  # noqa: E501
+                    #             label='JV Measurements',
+                    #         ),
+                    #         'data.activities_performed.ifm_measurement.0.name': MenuItemOption(  # noqa: E501
+                    #             label='IFM Measurements',
+                    #         ),
+                    #         'data.activities_performed.ifm_analysis.0.name': MenuItemOption(  # noqa: E501
+                    #             label='IFM Analysis',
+                    #         ),
+                    #     },
+                    #     show_input=False,
+                    # ),
                 ],
             ),
             Menu(

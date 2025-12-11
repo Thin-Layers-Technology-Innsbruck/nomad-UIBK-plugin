@@ -6,7 +6,7 @@ from nomad.datamodel.data import (
     EntryData,
 )
 from nomad.datamodel.metainfo.annotations import ELNAnnotation, ELNComponentEnum
-from nomad.datamodel.metainfo.basesections import CompositeSystem
+from nomad.datamodel.metainfo.basesections import CompositeSystem, SectionReference
 from nomad.datamodel.metainfo.plot import PlotlyFigure, PlotSection
 from nomad.metainfo import Quantity, SchemaPackage, Section, SubSection
 from nomad_pvcomb.schema_packages.activities import Object
@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from nomad.datamodel.datamodel import EntryArchive
     from structlog.stdlib import BoundLogger
 
+MAX_REFERENCING_ENTRIES_SEARCH = 10
 
 m_package = SchemaPackage()
 
@@ -76,6 +77,16 @@ class AlternativeID(ArchiveSection):
     url_to_resource = Quantity(type=str, a_eln=dict(component='URLEditQuantity'))
 
 
+class SampleActivities(ArchiveSection):
+    m_def = Section()
+
+    jv_measurement = SubSection(section_def=SectionReference, repeats=True)
+
+    ifm_measurement = SubSection(section_def=SectionReference, repeats=True)
+
+    ifm_analysis = SubSection(section_def=SectionReference, repeats=True)
+
+
 class UIBKSample(CompositeSystem, EntryData):
     m_def = Section(
         categories=[UIBKCategory],
@@ -89,7 +100,56 @@ class UIBKSample(CompositeSystem, EntryData):
         repeats=True,
     )
 
+    activities_performed = SubSection(
+        section_def=SampleActivities,
+        description="""References to all measurements or calculations performed with 
+            this sample that are present in the OASIS.""",
+    )
+
     def normalize(self, archive, logger: 'BoundLogger'):
+        from nomad.search import MetadataPagination, search
+
+        # add references back to activities
+        jv_measurement = []
+        ifm_analysis = []
+        ifm_measurement = []
+        query = {'entry_references.target_entry_id': archive.metadata.entry_id}
+        search_result = search(
+            owner='all',
+            query=query,  # type: ignore
+            pagination=MetadataPagination(page_size=MAX_REFERENCING_ENTRIES_SEARCH),
+            user_id=archive.metadata.main_author.user_id,  # type: ignore
+        )
+        for data in search_result.data:
+            entry_id = data['entry_id']
+            upload_id = data['upload_id']
+            entry_type = data['entry_type']
+            entry_name = data['entry_name']
+            sample_ref = f'../uploads/{upload_id}/archive/{entry_id}#data'
+            match entry_type:
+                case 'UIBK_JVMeasurement':
+                    jv_measurement.append(
+                        SectionReference(name=entry_name, reference=sample_ref)
+                    )
+                case 'IFMMeasurement':
+                    ifm_measurement.append(
+                        SectionReference(name=entry_name, reference=sample_ref)
+                    )
+                case 'IFMTwoStepAnalysisResult':
+                    ifm_analysis.append(
+                        SectionReference(name=entry_name, reference=sample_ref)
+                    )
+                case _:
+                    logger.warning(
+                        f'Unexpected entry_type {entry_type} of the reference '
+                        + f'{sample_ref}, skipping...'
+                    )
+        self.activities_performed = SampleActivities(
+            jv_measurement=jv_measurement,
+            ifm_analysis=ifm_analysis,
+            ifm_measurement=ifm_measurement,
+        )
+
         super().normalize(archive, logger)
         archive.metadata.entry_name = self.name
 
