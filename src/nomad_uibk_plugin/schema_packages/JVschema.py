@@ -94,3 +94,6 @@ class UIBK_JVMeasurement(JVMeasurement, EntryData):
 
         super().normalize(archive, logger)
         archive.metadata.entry_name = self.name
+
+
+m_package.__init_metainfo__()
