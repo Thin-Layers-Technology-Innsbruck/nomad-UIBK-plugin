@@ -5,7 +5,6 @@ from nomad.config.models.ui import (
     Column,
     Menu,
     MenuItemHistogram,
-    MenuItemOption,
     MenuItemTerms,
     MenuSizeEnum,
     ScaleEnum,
