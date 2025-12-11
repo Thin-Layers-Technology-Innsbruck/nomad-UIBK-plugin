@@ -84,7 +84,7 @@ class UIBK_JVMeasurement(JVMeasurement, EntryData):
         # Update sample references
         for sample in self.samples:
             sample_file_name, sample_ref = update_sample_refs(
-                sample=sample, # pyright: ignore[reportArgumentType]
+                sample=sample,  # pyright: ignore[reportArgumentType]
                 archive=archive,
                 logger=logger,
             )
