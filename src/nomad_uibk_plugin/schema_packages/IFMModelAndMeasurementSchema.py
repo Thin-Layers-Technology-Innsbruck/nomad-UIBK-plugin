@@ -184,7 +184,9 @@ class IFMMeasurement(ELNMeasurement):
         # Update sample references
         for sample in self.samples:
             sample_file_name, sample_ref = update_sample_refs(
-                sample=sample, archive=archive, logger=logger # pyright: ignore[reportArgumentType]
+                sample=sample, # pyright: ignore[reportArgumentType]
+                archive=archive,
+                logger=logger,
             )
             if (sample_file_name is not None) and (sample_ref is not None):
                 sample.name = sample_file_name
