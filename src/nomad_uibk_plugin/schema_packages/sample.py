@@ -196,14 +196,25 @@ class UIBKSampleReference(Object):
 
     reference = Quantity(
         type=UIBKSample,
-        description='Reference to an UIBK sample',
+        description='Reference to an UIBK sample.',
         a_eln=ELNAnnotation(
             component='ReferenceEditQuantity',
-            label='Link to Sample',
+            label='link to sample',
         ),
     )
 
-    position = Quantity(type=str, a_eln=dict(component='StringEditQuantity'))
+    position = Quantity(
+        type=str,
+        description='Positions within the sample (or the sample part) of the cells for '
+        + 'which the measurements were performed.',
+        a_eln=dict(component='StringEditQuantity'),
+    )
+
+    prefix = Quantity(
+        type=str,
+        description='Prefix of the sample part - usually related to its function.',
+        a_eln=dict(component='StringEditQuantity'),
+    )
 
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
         super().normalize(archive, logger)

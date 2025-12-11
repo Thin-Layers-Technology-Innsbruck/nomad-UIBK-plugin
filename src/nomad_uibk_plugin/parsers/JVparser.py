@@ -9,6 +9,7 @@ from nomad.datamodel.metainfo.annotations import ELNAnnotation
 from nomad.metainfo import Quantity
 from nomad.parsing.parser import MatchingParser
 from nomad_measurements.utils import create_archive
+from nomad_pvcomb.schema_packages.activities import File
 from nomad_pvcomb.schema_packages.processes import (
     SolarCellJVCurve,
     SolarCellJVCurveDark,
@@ -16,6 +17,7 @@ from nomad_pvcomb.schema_packages.processes import (
 
 from nomad_uibk_plugin.schema_packages.JVschema import UIBK_JVMeasurement
 from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
+from nomad_uibk_plugin.utils import safe_float
 
 if TYPE_CHECKING:
     from nomad.datamodel.datamodel import EntryArchive
@@ -42,14 +44,50 @@ class JVParser(MatchingParser):
     Parser for matching JV .json files and creating instances of UIBK_JVMeasurement.
     """
 
-    def parse(  # noqa: PLR0912, PLR0915
+    def match_sample_name(self, label: str):
+        """
+        Split measurement curve label and match it into sample id, prefix, position
+        Return None as sample id (generated_lab_id) if not matched to any pattern
+        """
+        split_label = re.compile(r'^(.*)_(\d+)$').match(label)
+        new_sample_name_no_position = split_label.group(1)  # pyright: ignore[reportOptionalMemberAccess]
+        new_position = split_label.group(2)  # pyright: ignore[reportOptionalMemberAccess]
+
+        # check if the sample is supported. Only types e and eZ for now
+        match_e = re.compile(r'^(\d{8})_(\d+)e(?:-(\d+))?$').match(
+            new_sample_name_no_position
+        )
+        match_eZ = re.compile(r'^(\d{8})_(\d+)eZ(?:-(\d+))?$').match(
+            new_sample_name_no_position
+        )
+        if match_e:
+            if match_e.group(3):
+                generated_lab_id = (
+                    f'{match_e.group(1)}_{match_e.group(2)}-{match_e.group(3)}'
+                )
+            else:
+                generated_lab_id = f'{match_e.group(1)}_{match_e.group(2)}-1'
+            new_prefix = 'e'
+        elif match_eZ:
+            if match_eZ.group(3):
+                generated_lab_id = (
+                    f'{match_eZ.group(1)}_{match_eZ.group(2)}-{match_eZ.group(3)}'
+                )
+            else:
+                generated_lab_id = f'{match_eZ.group(1)}_{match_eZ.group(2)}-1'
+            new_prefix = 'eZ'
+        else:
+            generated_lab_id = None
+            new_prefix = None
+
+        return generated_lab_id, new_prefix, new_position
+
+    def parse(
         self,
         mainfile: str,
         archive: 'EntryArchive',
         logger: 'BoundLogger',
     ) -> None:
-        # TODO: make code less ugly, split in purposeful functions, reduce the use of
-        # try/except, add comments
         logger.info('JVParser.parse')
         archive.metadata.entry_type = 'RawJVMeasurementFile'
 
@@ -59,95 +97,64 @@ class JVParser(MatchingParser):
         entries = []
         for measurement in source_json:
             source_data = measurement['dataStorage']['data']
-            split_label = re.compile(r'^(.*)_(\d+)$').match(source_data['label'])
-
-            # check if the sample is supported. Only types e and eZ for now
-            match_e = re.compile(r'^(\d{8})_(\d+)e(?:-(\d+))?$').match(
-                split_label.group(1)  # pyright: ignore[reportOptionalMemberAccess]
+            generated_lab_id, new_prefix, new_position = self.match_sample_name(
+                source_data['label']
             )
-            match_eZ = re.compile(r'^(\d{8})_(\d+)eZ(?:-(\d+))?$').match(
-                split_label.group(1)  # pyright: ignore[reportOptionalMemberAccess]
-            )
-            if match_e:
-                if match_e.group(3):
-                    generated_lab_id = (
-                        f'{match_e.group(1)}_{match_e.group(2)}-{match_e.group(3)}'
-                    )
-                else:
-                    generated_lab_id = f'{match_e.group(1)}_{match_e.group(2)}-1'
-                new_position = f'e{split_label.group(2)}'  # pyright: ignore[reportOptionalMemberAccess]
-            elif match_eZ:
-                if match_eZ.group(3):
-                    generated_lab_id = (
-                        f'{match_eZ.group(1)}_{match_eZ.group(2)}-{match_eZ.group(3)}'
-                    )
-                else:
-                    generated_lab_id = f'{match_eZ.group(1)}_{match_eZ.group(2)}-1'
-                new_position = f'eZ{split_label.group(2)}'  # pyright: ignore[reportOptionalMemberAccess]
-            else:
+            if generated_lab_id is None:
                 continue
 
-            try:
-                active_area = (source_data['activeArea'] / 100,)  # conversion to cm^2
-            except Exception:
-                active_area = None
-            try:
-                current_density_light = (
-                    np.array(source_data['calculationValues']['iLight'])
-                    * 1000
-                    / source_data['activeArea']
-                    * 100
-                )  # conversion to mA/cm^2
-            except Exception:
-                current_density_light = None
-            try:
-                current_density_at_maximum_power_point = (
-                    source_data['mppI'] / source_data['activeArea'] * 100
+            active_area = safe_float(source_data['activeArea'])
+            if active_area is None:
+                logger.warning(
+                    f'entry {source_data["label"]} skipped due to missing active area'
                 )
-            except Exception:
-                current_density_at_maximum_power_point = None
+                continue
+            else:
+                active_area_cm2 = active_area / 100  # to cm^2
             try:
                 jv_curve = SolarCellJVCurve(
                     label_name=source_data['measurementInfo']['lightId'],
                     datetime=source_data['measurementInfo']['lightTime'],
-                    cell_id=split_label.group(2),  # pyright: ignore[reportOptionalMemberAccess]
-                    active_area=active_area,
+                    cell_id=new_position,
+                    active_area=active_area_cm2,
                     cell_name=source_data['label'],
-                    current_density=current_density_light,
+                    current_density=np.array(source_data['calculationValues']['iLight'])
+                    * 1000
+                    / active_area_cm2,  # conversion to mA/cm^2
                     voltage=source_data['calculationValues']['uLight'],
-                    light_intensity=source_data['powerInput'],
-                    open_circuit_voltage=source_data['voc'],
-                    short_circuit_current_density=source_data['jsc'],
-                    fill_factor_in_percent=source_data['fF'],
-                    efficiency_in_percent=source_data['eff'],
-                    potential_at_maximum_power_point=source_data['mppU'],
-                    current_density_at_maximum_power_point=current_density_at_maximum_power_point,
-                    series_resistance=source_data['rs'],
-                    shunt_resistance=source_data['rp'],
+                    light_intensity=safe_float(source_data['powerInput']),
+                    open_circuit_voltage=safe_float(source_data['voc']),
+                    short_circuit_current_density=safe_float(source_data['jsc']),
+                    fill_factor_in_percent=safe_float(source_data['fF']),
+                    efficiency_in_percent=safe_float(source_data['eff']),
+                    potential_at_maximum_power_point=safe_float(source_data['mppU']),
+                    current_density_at_maximum_power_point=safe_float(
+                        source_data['mppI']
+                    ),  # divide by area later if not None
+                    series_resistance=safe_float(source_data['rs']),
+                    shunt_resistance=safe_float(source_data['rp']),
                 )
             except Exception as e:
                 logger.warning(f'entry {source_data["label"]} skipped due to {e}')
                 continue
-            try:
-                current_density_dark = (
-                    np.array(source_data['calculationValues']['iDark'])
-                    * 1000
-                    / source_data['activeArea']
-                    * 100
-                )  # conversion to mA/cm^2
-            except Exception:
-                current_density_dark = None
+            if jv_curve.current_density_at_maximum_power_point:
+                jv_curve.current_density_at_maximum_power_point = (
+                    jv_curve.current_density_at_maximum_power_point / active_area_cm2
+                )  # pyright: ignore[reportOperatorIssue]
+
             try:
                 dark_jv_curve = SolarCellJVCurveDark(
                     label_name=source_data['measurementInfo']['darkId'],
                     datetime=source_data['measurementInfo']['darkTime'],
-                    cell_id=split_label.group(2),  # pyright: ignore[reportOptionalMemberAccess]
-                    active_area=active_area,
+                    cell_id=new_position,
+                    active_area=active_area_cm2,
                     cell_name=source_data['label'],
-                    current_density=current_density_dark,
+                    current_density=np.array(source_data['calculationValues']['iDark'])
+                    * 1000
+                    / active_area_cm2,  # conversion to mA/cm^2
                     voltage=source_data['calculationValues']['uDark'],
-                    series_resistance=source_data['darkRs'],
-                    shunt_resistance=source_data['darkRp'],
+                    series_resistance=safe_float(source_data['darkRs']),
+                    shunt_resistance=safe_float(source_data['darkRp']),
                 )
             except Exception as e:
                 logger.warning(f'entry {source_data["label"]} skipped due to {e}')
@@ -155,11 +162,21 @@ class JVParser(MatchingParser):
 
             entry_old_found = False
             for entry_old in entries:
-                if generated_lab_id == entry_old.samples[0].lab_id:  # pyright: ignore[reportOptionalMemberAccess]
+                if (generated_lab_id == entry_old.samples[0].lab_id) and (
+                    new_prefix == entry_old.samples[0].prefix
+                ):
+                    if new_position in entry_old.samples[0].position.split(', '):
+                        logger.warning(
+                            f'json entry {source_data["label"]} corresponds to a '
+                            + f'measurement already recorded {entry_old.name}, '
+                            + 'skipping...'
+                        )
+                        entry_old_found = True
+                        break
                     entry_old.jv_curves.append(jv_curve)
                     entry_old.dark_jv_curves.append(dark_jv_curve)
                     entry_old.samples[0].position = (
-                        entry_old.samples[0].position + ', ' + new_position
+                        entry_old.samples[0].position + ', ' + f'{new_position}'
                     )
                     entry_old_found = True
                     break
@@ -172,14 +189,18 @@ class JVParser(MatchingParser):
                 entry.dark_jv_curves = [dark_jv_curve]
                 entry.samples = [
                     UIBKSampleReference(
-                        lab_id=generated_lab_id,  # pyright: ignore[reportOptionalMemberAccess]
-                        position=new_position,  # pyright: ignore[reportOptionalMemberAccess]
+                        lab_id=generated_lab_id,
+                        position=f'{new_position}',
+                        prefix=new_prefix,
                     )
                 ]
+                entry.files = File(data_files=[mainfile.split('/raw/')[-1]])
                 entries.append(entry)
 
         for entry in entries:
-            file_name = f'JV_{entry.samples[0].lab_id}.archive.json'
+            file_name = (
+                f'JV_{entry.samples[0].lab_id}-{entry.samples[0].prefix}.archive.json'
+            )
             create_archive(
                 entity=entry,
                 archive=archive,
