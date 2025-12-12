@@ -5,6 +5,7 @@ import time
 
 import h5py
 import numpy as np
+import pandas as pd
 import plotly.graph_objs as go
 from nomad.app.v1.routers.uploads import get_upload_with_read_access
 from nomad.datamodel import User
@@ -29,6 +30,7 @@ Image.MAX_IMAGE_PIXELS = 1000000000  # increases limit for image size
 
 PATCH_SIZE = 640
 LONG_SIDE_PLOT = 512  # approximate value due to int operations
+MAX_ATTEMPT_NUM = 100  # attempts to reprocess upload with new entries
 
 
 @activity.defn
@@ -173,9 +175,20 @@ async def read_file_and_write_archive(writer_input: WriteArchiveInput):  # noqa:
     relative_share = defect_pixels / total_pixel
     relative_share[no_def_index] = no_def_pixel / total_pixel
 
+    df = pd.read_csv(writer_input.csv_path)
+    defect_count = []
+    for defect_type in defect_types:
+        result = df[df['class_name'] == defect_type]
+        if result.empty:
+            defect_count.append(0)
+        else:
+            defect_count.append(int(result['instance_count'].iloc[0]))
+
     defect_prevalence = []
-    for key, value in zip(defect_types, relative_share):
-        defect_prevalence.append(DefectPrevalence(name=key, prevalence=value))
+    for defect_type, share, count in zip(defect_types, relative_share, defect_count):
+        defect_prevalence.append(
+            DefectPrevalence(name=defect_type, prevalence=share, count=count)
+        )
 
     # Downscale masks for plotting
     layers, h, w = mask.shape  # type: ignore
@@ -285,8 +298,7 @@ async def process_new_files(data: ProcessNewFilesInput):
             dict(op='ADD', path=path, target_dir=target_dir, temporary=False)
         )
 
-    max_attempt_num = 100
-    for i in range(max_attempt_num):
+    for i in range(MAX_ATTEMPT_NUM):
         upload = get_upload_with_read_access(
             data.upload_id,
             User(user_id=data.user_id),
