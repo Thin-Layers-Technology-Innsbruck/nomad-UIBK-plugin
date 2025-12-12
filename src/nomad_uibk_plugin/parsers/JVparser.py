@@ -4,9 +4,6 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from nomad.config import config
-from nomad.datamodel.data import EntryData
-from nomad.datamodel.metainfo.annotations import ELNAnnotation
-from nomad.metainfo import Quantity
 from nomad.parsing.parser import MatchingParser
 from nomad_measurements.utils import create_archive
 
@@ -19,19 +16,6 @@ if TYPE_CHECKING:
     from structlog.stdlib import BoundLogger
 
 configuration = config.get_plugin_entry_point('nomad_uibk_plugin.parsers:jvjsonparser')
-
-
-class RawFileJVMeasData(EntryData):
-    """
-    Section for an JV Measurements data .json file.
-    """
-
-    measurement = Quantity(
-        type=UIBK_JVMeasurement,
-        a_eln=ELNAnnotation(
-            component='ReferenceEditQuantity',
-        ),
-    )
 
 
 class JVParser(MatchingParser):
