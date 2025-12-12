@@ -146,7 +146,7 @@ def run_ifm_inference(data: ActivityInferenceInput):
 
 
 @activity.defn
-async def read_file_and_write_archive(writer_input: WriteArchiveInput):  # noqa: PLR0915
+async def read_file_and_write_archive(writer_input: WriteArchiveInput):  # noqa: PLR0912, PLR0915
     if not os.path.exists(writer_input.csv_path):
         raise FileExistsError('No csv file found.')
     if not os.path.exists(writer_input.h5_path):
