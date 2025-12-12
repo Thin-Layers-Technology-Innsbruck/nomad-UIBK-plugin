@@ -4,16 +4,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from nomad.config import config
-from nomad.datamodel.data import EntryData
-from nomad.datamodel.metainfo.annotations import ELNAnnotation
-from nomad.metainfo import Quantity
 from nomad.parsing.parser import MatchingParser
 from nomad_measurements.utils import create_archive
-from nomad_pvcomb.schema_packages.activities import File
-from nomad_pvcomb.schema_packages.processes import (
-    SolarCellJVCurve,
-    SolarCellJVCurveDark,
-)
 
 from nomad_uibk_plugin.schema_packages.JVschema import UIBK_JVMeasurement
 from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
@@ -24,19 +16,6 @@ if TYPE_CHECKING:
     from structlog.stdlib import BoundLogger
 
 configuration = config.get_plugin_entry_point('nomad_uibk_plugin.parsers:jvjsonparser')
-
-
-class RawFileJVMeasData(EntryData):
-    """
-    Section for an JV Measurements data .json file.
-    """
-
-    measurement = Quantity(
-        type=UIBK_JVMeasurement,
-        a_eln=ELNAnnotation(
-            component='ReferenceEditQuantity',
-        ),
-    )
 
 
 class JVParser(MatchingParser):
@@ -88,6 +67,12 @@ class JVParser(MatchingParser):
         archive: 'EntryArchive',
         logger: 'BoundLogger',
     ) -> None:
+        from nomad_pvcomb.schema_packages.activities import File
+        from nomad_pvcomb.schema_packages.processes import (
+            SolarCellJVCurve,
+            SolarCellJVCurveDark,
+        )
+
         logger.info('JVParser.parse')
         archive.metadata.entry_type = 'RawJVMeasurementFile'
 
