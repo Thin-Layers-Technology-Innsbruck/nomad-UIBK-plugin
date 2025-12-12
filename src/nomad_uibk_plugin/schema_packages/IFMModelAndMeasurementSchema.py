@@ -34,11 +34,12 @@ from nomad.datamodel.metainfo.basesections import (
 )
 from nomad.datamodel.metainfo.eln import ELNMeasurement
 from nomad.metainfo import Datetime, MEnum, Quantity, SchemaPackage, Section, SubSection
-from nomad_measurements.utils import create_archive, merge_sections
+from nomad_measurements.utils import merge_sections
 from pint import UnitRegistry
 
 from nomad_uibk_plugin.schema_packages import UIBKCategory
-from nomad_uibk_plugin.schema_packages.sample import UIBKSample, UIBKSampleReference
+from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
+from nomad_uibk_plugin.utils import update_sample_refs
 
 if TYPE_CHECKING:
     from nomad.datamodel import EntryArchive
@@ -182,43 +183,12 @@ class IFMMeasurement(ELNMeasurement):
 
         # Update sample references
         for sample in self.samples:
-            if sample.lab_id and not sample.reference:
-                from nomad.search import MetadataPagination, search
-
-                query = {'results.eln.lab_ids': sample.lab_id}
-                search_result = search(
-                    owner='all',
-                    query=query,
-                    pagination=MetadataPagination(page_size=1),
-                    user_id=archive.metadata.main_author.user_id,
-                )
-                if search_result.pagination.total == 0:
-                    new_sample = UIBKSample(lab_id=sample.lab_id)
-                    sample_file_name = f'Sample_{sample.lab_id}.archive.json'
-                    sample_ref = create_archive(
-                        entity=new_sample,
-                        archive=archive,
-                        file_name=sample_file_name,
-                        overwrite=False,
-                    )
-                else:
-                    entry_id = search_result.data[0]['entry_id']
-                    upload_id = search_result.data[0]['upload_id']
-                    sample_ref = f'../uploads/{upload_id}/archive/{entry_id}#data'
-                    try:
-                        sample_file_name = search_result.data[0]['results']['eln'][
-                            'names'
-                        ][0]
-                    except Exception as e:
-                        sample_file_name = sample.lab_id
-                        logger.warn(
-                            f'Found no sample name, using sample id instead: {e}'
-                        )
-                    if search_result.pagination.total > 1:
-                        logger.warn(
-                            f'Found {search_result.pagination.total} entries with '
-                            f'lab_id: "{sample.lab_id}". Will use the first one found.'
-                        )
+            sample_file_name, sample_ref = update_sample_refs(
+                sample=sample,  # pyright: ignore[reportArgumentType]
+                archive=archive,
+                logger=logger,
+            )
+            if (sample_file_name is not None) and (sample_ref is not None):
                 sample.name = sample_file_name
                 sample.reference = sample_ref
 
@@ -278,15 +248,6 @@ class IFMModel(Entity, EntryData):
         for entry in Entry.objects(upload_id=archive.metadata.upload_id):
             if entry.mainfile == source_name:
                 self.file = source_name
-
-        # if self.file is not None:
-        #     logger.info('Model file recognized. Parsing...')
-
-        #     from nomad_uibk_plugin.filereader.IFMreader import read_keras_metadata
-
-        #     with archive.m_context.raw_file(self.file, 'rb') as file:
-        #         model = read_keras_metadata(file, archive, logger)
-        #         merge_sections(self, model, logger)
 
         super().normalize(archive, logger)
         archive.metadata.entry_name = self.name

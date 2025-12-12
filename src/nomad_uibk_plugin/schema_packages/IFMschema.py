@@ -67,6 +67,10 @@ class DefectPrevalence(ArchiveSection):
         type=float,
         description='Prevalence of a given type of defect',
     )
+    count = Quantity(
+        type=int,
+        description='Count of defects of a given type',
+    )
 
 
 class IFMTwoStepAnalysisResult(Entity, PlotSection, EntryData):

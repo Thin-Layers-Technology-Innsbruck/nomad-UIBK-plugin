@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from nomad.datamodel.datamodel import EntryArchive
     from structlog.stdlib import BoundLogger
 
-configuration = config.get_plugin_entry_point('nomad_uibk_plugin.parsers:xrfparser')
+configuration = config.get_plugin_entry_point('nomad_uibk_plugin.parsers:ifmparser')
 
 
 class RawFileIFMMeasData(EntryData):
@@ -61,6 +61,11 @@ class IFMParser(MatchingParser):
             file_name=file_name,
             overwrite=True,
         )
+
+
+configuration = config.get_plugin_entry_point(
+    'nomad_uibk_plugin.parsers:ifmmodelparser'
+)
 
 
 class IFMModelParser(MatchingParser):

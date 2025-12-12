@@ -16,7 +16,12 @@
 # limitations under the License.
 #
 
+import math
 from typing import TYPE_CHECKING
+
+from nomad_measurements.utils import create_archive
+
+from nomad_uibk_plugin.schema_packages.sample import UIBKSample, UIBKSampleReference
 
 if TYPE_CHECKING:
     from nomad.datamodel.datamodel import EntryArchive
@@ -25,7 +30,7 @@ if TYPE_CHECKING:
 
 def find_reference_by_id(
     target_id: str, target_type: str, archive: 'EntryArchive', logger: 'BoundLogger'
-) -> str:
+) -> str | None:
     """
     Extracts the target references from the metadata.
 
@@ -52,7 +57,7 @@ def find_reference_by_id(
             'results.eln.sections:any': [target_type],
             'results.eln.lab_ids:any': [target_id],
         },
-        user_id=archive.metadata.main_author.user_id,
+        user_id=archive.metadata.main_author.user_id,  # type: ignore
     )
 
     # Logger checks
@@ -71,3 +76,63 @@ def find_reference_by_id(
         upload_id = search_result.data[0]['upload_id']
 
         return f'../uploads/{upload_id}/archive/{entry_id}#data'
+
+
+def safe_float(input) -> float | None:
+    "like float(), but returns None if conversion is not possible or results in NaN"
+    try:
+        output = float(input)
+    except (ValueError, TypeError):
+        return None
+    if math.isnan(output):
+        return None
+    else:
+        return output
+
+
+def update_sample_refs(
+    sample: UIBKSampleReference, archive: 'EntryArchive', logger: 'BoundLogger'
+) -> tuple[str | None, str | None]:
+    """
+    If sample reference has lab-id but no reference,
+    search for sample entry by id, create a new one if none found
+
+    Returns name and reference for the sample reference class
+    """
+    if sample.lab_id and not sample.reference:
+        from nomad.search import MetadataPagination, search
+
+        query = {'results.eln.lab_ids': sample.lab_id}
+        search_result = search(
+            owner='all',
+            query=query,  # type: ignore
+            pagination=MetadataPagination(page_size=1),
+            user_id=archive.metadata.main_author.user_id,  # type: ignore
+        )
+        if search_result.pagination.total == 0:
+            new_sample = UIBKSample(lab_id=sample.lab_id)
+            sample_file_name = f'Sample_{sample.lab_id}.archive.json'
+            sample_ref = create_archive(
+                entity=new_sample,
+                archive=archive,
+                file_name=sample_file_name,
+                overwrite=False,
+            )
+        else:
+            entry_id = search_result.data[0]['entry_id']
+            upload_id = search_result.data[0]['upload_id']
+            sample_ref = f'../uploads/{upload_id}/archive/{entry_id}#data'
+            try:
+                sample_file_name = search_result.data[0]['results']['eln']['names'][0]
+            except Exception as e:
+                sample_file_name = str(sample.lab_id)
+                logger.warn(f'Found no sample name, using sample id instead: {e}')
+            if search_result.pagination.total > 1:
+                logger.warn(
+                    f'Found {search_result.pagination.total} entries with '
+                    f'lab_id: "{sample.lab_id}". Will use the first one found.'
+                )
+    else:
+        sample_file_name = None
+        sample_ref = None
+    return sample_file_name, sample_ref
