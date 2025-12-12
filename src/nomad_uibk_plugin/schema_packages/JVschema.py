@@ -22,7 +22,7 @@ from typing import (
 
 from nomad.datamodel.data import EntryData
 from nomad.metainfo import SchemaPackage, Section
-from nomad_pvcomb.schema_packages.processes.jv_measurement import JVMeasurement
+from nomad_pvcomb.schema_packages.processes import JVMeasurement
 from pint import UnitRegistry
 
 from nomad_uibk_plugin.schema_packages import UIBKCategory
