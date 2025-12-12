@@ -82,7 +82,7 @@ class JVParser(MatchingParser):
 
         return generated_lab_id, new_prefix, new_position
 
-    def parse(
+    def parse(  # noqa: PLR0912, PLR0915
         self,
         mainfile: str,
         archive: 'EntryArchive',
@@ -111,6 +111,16 @@ class JVParser(MatchingParser):
                 continue
             else:
                 active_area_cm2 = active_area / 100  # to cm^2
+
+            light_intensity = safe_float(source_data['powerInput'])
+            if light_intensity is None:
+                logger.warning(
+                    f'entry {source_data["label"]} skipped due to missing light '
+                    + 'intensity'
+                )
+                continue
+            else:
+                light_intensity_nomad_unit = light_intensity / 10  # to mW/cm**2
             try:
                 jv_curve = SolarCellJVCurve(
                     label_name=source_data['measurementInfo']['lightId'],
@@ -122,7 +132,7 @@ class JVParser(MatchingParser):
                     * 1000
                     / active_area_cm2,  # conversion to mA/cm^2
                     voltage=source_data['calculationValues']['uLight'],
-                    light_intensity=safe_float(source_data['powerInput']),
+                    light_intensity=light_intensity_nomad_unit,
                     open_circuit_voltage=safe_float(source_data['voc']),
                     short_circuit_current_density=safe_float(source_data['jsc']),
                     fill_factor_in_percent=safe_float(source_data['fF']),
