@@ -5,9 +5,9 @@ from nomad.datamodel.data import EntryData
 from nomad.datamodel.metainfo.annotations import ELNAnnotation
 from nomad.metainfo import Quantity
 from nomad.parsing.parser import MatchingParser
-from nomad_measurements.utils import create_archive
 
 from nomad_uibk_plugin.schema_packages.XRFschema import ELNXRayFluorescence
+from nomad_uibk_plugin.utils import create_archive
 
 if TYPE_CHECKING:
     from nomad.datamodel.datamodel import EntryArchive

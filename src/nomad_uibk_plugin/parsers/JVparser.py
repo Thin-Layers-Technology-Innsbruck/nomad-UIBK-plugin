@@ -5,11 +5,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 from nomad.config import config
 from nomad.parsing.parser import MatchingParser
-from nomad_measurements.utils import create_archive
 
 from nomad_uibk_plugin.schema_packages.JVschema import UIBK_JVMeasurement
 from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
-from nomad_uibk_plugin.utils import safe_float
+from nomad_uibk_plugin.utils import create_archive, safe_float
 
 if TYPE_CHECKING:
     from nomad.datamodel.datamodel import EntryArchive

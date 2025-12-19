@@ -16,7 +16,6 @@
 # limitations under the License.
 #
 
-import re
 from typing import (
     TYPE_CHECKING,
 )
@@ -154,23 +153,6 @@ class IFMMeasurement(ELNMeasurement):
         - Update the sample references if lab_id is given.
         """
 
-        self.method = 'IFM Measurement'
-
-        # find corresponding data files
-        bmp_name = re.sub(r'\.archive\.json$', '', archive.metadata.mainfile) + '.bmp'
-        xml_name = (
-            re.sub(r'texture\.archive\.json$', '', archive.metadata.mainfile)
-            + 'info.xml'
-        )
-
-        from nomad.processing.data import Entry
-
-        for entry in Entry.objects(upload_id=archive.metadata.upload_id):
-            if entry.mainfile == bmp_name:
-                self.image_file = bmp_name
-            if entry.mainfile == xml_name:
-                self.metadata_file = xml_name
-
         # Read metadata from file
         if self.metadata_file is not None:
             logger.info('Metadata file recognized. Parsing...')
@@ -238,16 +220,6 @@ class IFMModel(Entity, EntryData):
         """
         Read the model file and extract the metadata.
         """
-        self.method = 'IFM Model'
-
-        # find corresponding data files
-        source_name = re.sub(r'\.archive\.json$', '', archive.metadata.mainfile) + '.pt'
-
-        from nomad.processing.data import Entry
-
-        for entry in Entry.objects(upload_id=archive.metadata.upload_id):
-            if entry.mainfile == source_name:
-                self.file = source_name
 
         super().normalize(archive, logger)
         archive.metadata.entry_name = self.name

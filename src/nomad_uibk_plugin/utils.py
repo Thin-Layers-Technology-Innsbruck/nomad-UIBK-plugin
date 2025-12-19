@@ -19,13 +19,46 @@
 import math
 from typing import TYPE_CHECKING
 
-from nomad_measurements.utils import create_archive
-
 from nomad_uibk_plugin.schema_packages.sample import UIBKSample, UIBKSampleReference
 
 if TYPE_CHECKING:
+    from nomad.datamodel.data import ArchiveSection
     from nomad.datamodel.datamodel import EntryArchive
     from structlog.stdlib import BoundLogger
+
+
+def get_reference(upload_id: str, entry_id: str) -> str:
+    return f'../uploads/{upload_id}/archive/{entry_id}#data'
+
+
+def get_entry_id_from_file_name(file_name: str, archive: 'EntryArchive') -> str:
+    from nomad.utils import hash
+
+    return hash(archive.metadata.upload_id, file_name)
+
+
+def create_archive(
+    entity: 'ArchiveSection',
+    archive: 'EntryArchive',
+    file_name: str,
+    overwrite: bool = False,
+    reprocess: bool = False,
+) -> str:
+    if overwrite or not archive.m_context.raw_path_exists(file_name):
+        with archive.m_context.update_entry(
+            file_name, write=True, process=True
+        ) as entry:
+            # print(f'@@@ Creating archive for {file_name} @@@')
+            entry['data'] = entity.m_to_dict(with_root_def=True)
+    elif reprocess:
+        with archive.m_context.update_entry(
+            file_name, write=True, process=True
+        ) as entry:
+            # print(f'@@@ Reprocessing archive for {file_name} @@@')
+            pass # just trigger reprocessing
+    return get_reference(
+        archive.metadata.upload_id, get_entry_id_from_file_name(file_name, archive)
+    )
 
 
 def find_reference_by_id(
