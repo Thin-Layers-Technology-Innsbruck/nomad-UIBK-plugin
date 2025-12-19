@@ -1,9 +1,6 @@
 from typing import TYPE_CHECKING
 
 from nomad.config import config
-from nomad.datamodel.data import EntryData
-from nomad.datamodel.metainfo.annotations import ELNAnnotation
-from nomad.metainfo import Quantity
 from nomad.parsing.parser import MatchingParser
 
 from nomad_uibk_plugin.schema_packages.IFMModelAndMeasurementSchema import (
