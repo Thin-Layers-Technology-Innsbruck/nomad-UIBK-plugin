@@ -19,7 +19,13 @@
 import math
 from typing import TYPE_CHECKING
 
-from nomad_uibk_plugin.schema_packages.sample import UIBKSample, UIBKSampleReference
+from nomad.datamodel.metainfo.basesections import SectionReference
+
+from nomad_uibk_plugin.schema_packages.sample import (
+    SampleActivities,
+    UIBKSample,
+    UIBKSampleReference,
+)
 
 if TYPE_CHECKING:
     from nomad.datamodel.data import ArchiveSection
@@ -48,13 +54,11 @@ def create_archive(
         with archive.m_context.update_entry(
             file_name, write=True, process=True
         ) as entry:
-            # print(f'@@@ Creating archive for {file_name} @@@')
             entry['data'] = entity.m_to_dict(with_root_def=True)
     elif reprocess:
         with archive.m_context.update_entry(
             file_name, write=True, process=True
         ) as entry:
-            # print(f'@@@ Reprocessing archive for {file_name} @@@')
             pass  # just trigger reprocessing
     return get_reference(
         archive.metadata.upload_id, get_entry_id_from_file_name(file_name, archive)
@@ -124,48 +128,102 @@ def safe_float(input) -> float | None:
 
 
 def update_sample_refs(
-    sample: UIBKSampleReference, archive: 'EntryArchive', logger: 'BoundLogger'
-) -> tuple[str | None, str | None]:
+    sample: UIBKSampleReference,
+    archive: 'EntryArchive',
+    logger: 'BoundLogger',
+    activity_type: str,
+    activity_name: str,
+) -> None:
     """
     If sample reference has lab-id but no reference,
     search for sample entry by id, create a new one if none found
 
     Returns name and reference for the sample reference class
     """
-    if sample.lab_id and not sample.reference:
-        from nomad.search import MetadataPagination, search
+    from nomad.processing.data import Upload
+    from nomad.search import MetadataPagination, search
 
-        query = {'results.eln.lab_ids': sample.lab_id}
-        search_result = search(
-            owner='all',
-            query=query,  # type: ignore
-            pagination=MetadataPagination(page_size=1),
-            user_id=archive.metadata.main_author.user_id,  # type: ignore
+    sample_id = str(sample.lab_id)
+    # TODO check that entry is UIBKSample in the query
+    query = {'results.eln.lab_ids': sample_id}
+    new_activity_ref = get_reference(
+        archive.metadata.upload_id, archive.metadata.entry_id
+    )
+    # find existing sample entry
+    search_result = search(
+        owner='all',
+        query=query,  # type: ignore
+        pagination=MetadataPagination(page_size=1),
+        user_id=archive.metadata.main_author.user_id,  # type: ignore
+    )
+    # create new sample entry if none found
+    if search_result.pagination.total == 0:
+        new_sample = UIBKSample(
+            lab_id=sample_id,
+            activities_performed=SampleActivities(
+                **{
+                    activity_type: [
+                        SectionReference(name=activity_name, reference=new_activity_ref)
+                    ]
+                }  # pyright: ignore[reportArgumentType]
+            ),
         )
-        if search_result.pagination.total == 0:
-            new_sample = UIBKSample(lab_id=sample.lab_id)
-            sample_file_name = f'Sample_{sample.lab_id}.archive.json'
-            sample_ref = create_archive(
-                entity=new_sample,
-                archive=archive,
-                file_name=sample_file_name,
-                overwrite=False,
-            )
-        else:
-            entry_id = search_result.data[0]['entry_id']
-            upload_id = search_result.data[0]['upload_id']
-            sample_ref = f'../uploads/{upload_id}/archive/{entry_id}#data'
-            try:
-                sample_file_name = search_result.data[0]['results']['eln']['names'][0]
-            except Exception as e:
-                sample_file_name = str(sample.lab_id)
-                logger.warn(f'Found no sample name, using sample id instead: {e}')
-            if search_result.pagination.total > 1:
-                logger.warn(
-                    f'Found {search_result.pagination.total} entries with '
-                    f'lab_id: "{sample.lab_id}". Will use the first one found.'
-                )
+        sample_file_name = f'Sample_{sample_id}.archive.json'
+        sample_ref = create_archive(
+            entity=new_sample,
+            archive=archive,
+            file_name=sample_file_name,
+            overwrite=True,
+        )
     else:
-        sample_file_name = None
-        sample_ref = None
-    return sample_file_name, sample_ref
+        entry_id = search_result.data[0]['entry_id']
+        upload_id = search_result.data[0]['upload_id']
+        sample_ref = f'../uploads/{upload_id}/archive/{entry_id}#data'
+        try:
+            sample_file_name = search_result.data[0]['mainfile']
+        except Exception as e:
+            sample_file_name = f'Sample_{sample_id}.archive.json'
+            logger.warn(f'Found no sample file name, using sample id instead: {e}')
+        if search_result.pagination.total > 1:
+            logger.warn(
+                f'Found {search_result.pagination.total} entries with '
+                f'lab_id: "{sample_id}". Will use the first one found.'
+            )
+        # update activities performed in sample entry
+        sample_archive = archive.m_context.load_archive(
+            entry_id, upload_id, archive.m_context.installation_url
+        )
+        sample_entry_needs_reprocessing = False
+        with sample_archive.m_context.update_entry(
+            sample_file_name, write=True, process=False
+        ) as sample_entry:
+            if 'activities_performed' not in sample_entry['data']:
+                sample_entry['data']['activities_performed'] = {}
+                sample_entry_needs_reprocessing = True
+            if activity_type not in sample_entry['data']['activities_performed']:
+                sample_entry['data']['activities_performed'][activity_type] = []
+                sample_entry_needs_reprocessing = True
+            # check if activity already listed
+            for old_activity in sample_entry['data']['activities_performed'][
+                activity_type
+            ]:
+                if old_activity['reference'] == new_activity_ref:
+                    break
+            else:
+                sample_entry['data']['activities_performed'][activity_type].append(
+                    {
+                        'name': activity_name,
+                        'reference': new_activity_ref,
+                    }
+                )
+                sample_entry_needs_reprocessing = True
+        if sample_entry_needs_reprocessing:
+            upload_with_sample = Upload.get(upload_id)
+            # TODO: check user access rights here
+            upload_with_sample.process_updated_raw_file(
+                sample_file_name, allow_modify=True
+            )
+
+    sample.name = sample_file_name
+    sample.reference = sample_ref
+    # return sample_file_name, sample_ref

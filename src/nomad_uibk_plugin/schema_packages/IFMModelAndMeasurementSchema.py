@@ -38,7 +38,7 @@ from pint import UnitRegistry
 
 from nomad_uibk_plugin.schema_packages import UIBKCategory
 from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
-from nomad_uibk_plugin.utils import update_sample_refs
+from nomad_uibk_plugin.utils import update_sample_refs, get_reference
 
 if TYPE_CHECKING:
     from nomad.datamodel import EntryArchive
@@ -152,6 +152,14 @@ class IFMMeasurement(ELNMeasurement):
         - Read the metadata file and extract information from it.
         - Update the sample references if lab_id is given.
         """
+        # for key in archive.metadata.__dict__.keys():
+        #     print(key, archive.metadata.__dict__[key])
+        if self.name is None:
+            self.name = (
+                archive.metadata.mainfile.split('/')[-1].split('.')[0].replace('_', ' ')
+            )
+
+        archive.metadata.entry_name = self.name
 
         # Read metadata from file
         if self.metadata_file is not None:
@@ -165,17 +173,22 @@ class IFMMeasurement(ELNMeasurement):
 
         # Update sample references
         for sample in self.samples:
-            sample_file_name, sample_ref = update_sample_refs(
-                sample=sample,  # pyright: ignore[reportArgumentType]
-                archive=archive,
-                logger=logger,
-            )
-            if (sample_file_name is not None) and (sample_ref is not None):
-                sample.name = sample_file_name
-                sample.reference = sample_ref
+            if sample.lab_id is not None and sample.reference is None:
+                update_sample_refs(
+                    sample=sample,  # pyright: ignore[reportArgumentType]
+                    archive=archive,
+                    logger=logger,
+                    activity_type='ifm_measurement',
+                    activity_name=self.name,
+                )
+
+            elif sample.reference is not None:
+                if sample.lab_id is None:
+                    sample.lab_id = sample.reference.lab_id
+                if sample.name is None:
+                    sample.name = sample.reference.name
 
         super().normalize(archive, logger)
-        archive.metadata.entry_name = self.name
 
 
 class IFMModel(Entity, EntryData):
