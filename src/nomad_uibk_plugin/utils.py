@@ -55,7 +55,7 @@ def create_archive(
             file_name, write=True, process=True
         ) as entry:
             # print(f'@@@ Reprocessing archive for {file_name} @@@')
-            pass # just trigger reprocessing
+            pass  # just trigger reprocessing
     return get_reference(
         archive.metadata.upload_id, get_entry_id_from_file_name(file_name, archive)
     )
