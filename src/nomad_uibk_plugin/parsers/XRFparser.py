@@ -42,7 +42,7 @@ class XRFParser(MatchingParser):
         child_archives: dict[str, 'EntryArchive'] = None,
     ) -> None:
         logger.info('XRFParser.parse')
-        data_file = mainfile.split('/')[-1]
+        data_file = mainfile.rsplit('/', maxsplit=1)[-1]
         entry = ELNXRayFluorescence.m_from_dict(ELNXRayFluorescence.m_def.a_template)
         entry.data_file = data_file
         file_name = f'{"".join(data_file.split(".")[:-1])}.archive.json'

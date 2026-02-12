@@ -27,7 +27,7 @@ class IFMParser(MatchingParser):
         logger: 'BoundLogger',
     ) -> None:
         logger.info('IFMParser.parse')
-        data_file = mainfile.split('/raw/')[-1]
+        data_file = mainfile.rsplit('/raw/', maxsplit=1)[-1]
         data_path = data_file.split('/')
         if len(data_path) > 1:
             folders_path = '/'.join(data_path[:-1]) + '/'
@@ -98,7 +98,7 @@ class IFMModelParser(MatchingParser):
         logger: 'BoundLogger',
     ) -> None:
         logger.info('IFMModelParser.parse')
-        data_file = mainfile.split('/raw/')[-1]
+        data_file = mainfile.rsplit('/raw/', maxsplit=1)[-1]
         file_name = f'{data_file[:-2]}archive.json'
         archive.metadata.entry_type = 'RawModelFile'
         new_empty_entry = IFMModel.m_from_dict(IFMModel.m_def.a_template)

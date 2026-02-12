@@ -188,7 +188,9 @@ class JVParser(MatchingParser):
                         prefix=new_prefix,
                     )
                 ]
-                entry.files = File(data_files=[mainfile.split('/raw/')[-1]])
+                entry.files = File(
+                    data_files=[mainfile.rsplit('/raw/', maxsplit=1)[-1]]
+                )
                 entries.append(entry)
 
         for entry in entries:
