@@ -306,7 +306,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
 
     def check_results(self, archive: 'EntryArchive', logger: 'BoundLogger'):
         if (
-            self.trigger_get_status 
+            self.trigger_get_status
             and self.triggered_inference
             and self.triggered_inference.action_id
             and self.triggered_inference.status != 'COMPLETED'
@@ -315,8 +315,8 @@ class IFMTwoStepAnalysis(ELNAnalysis):
 
             try:
                 status = get_action_status(
-                    self.triggered_inference.action_id, # pyright: ignore[reportArgumentType]
-                    archive.metadata.authors[0].user_id, # type: ignore
+                    self.triggered_inference.action_id,  # pyright: ignore[reportArgumentType]
+                    archive.metadata.authors[0].user_id,  # type: ignore
                 )
                 if status:
                     self.triggered_inference.status = status.name
@@ -385,7 +385,7 @@ class IFMTwoStepAnalysis(ELNAnalysis):
             logger.info('Model found. Ready for IFM Two Step Analysis.')
 
             if self.trigger_run_action and (
-                self.triggered_inference is None 
+                self.triggered_inference is None
                 or self.triggered_inference.status != 'RUNNING'
             ):
                 # remove subsections corresponding to previous runs
@@ -455,7 +455,6 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                         logger.warning(
                             'trigger_run_action not found in the archive during reset.'
                         )
-
 
                 # Execute action that runs Georgs code to extract the defects
                 # and creates results entries
