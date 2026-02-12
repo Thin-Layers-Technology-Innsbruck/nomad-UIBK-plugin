@@ -127,6 +127,18 @@ class IFMTwoStepAnalysisResult(Entity, PlotSection, EntryData):
     )
 
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+        from nomad_uibk_plugin.utils import update_sample_refs
+
+        if self.sample and self.sample.lab_id:
+            update_sample_refs(
+                sample=self.sample,  # pyright: ignore[reportArgumentType]
+                archive=archive,
+                logger=logger,
+                activity_type='ifm_analysis',
+                activity_name=self.name,
+                update_backward_refs=False,
+            )
+
         super().normalize(archive, logger)
         self.name = self.name.split('.')[0].replace('_', ' ')  # type: ignore
         archive.metadata.entry_name = self.name

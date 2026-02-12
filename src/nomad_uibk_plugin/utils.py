@@ -127,12 +127,80 @@ def safe_float(input) -> float | None:
         return output
 
 
-def update_sample_refs(
+def update_backward_refs_in_sample(  # noqa: PLR0913
+    entry_id: str,
+    upload_id: str,
+    archive: 'EntryArchive',
+    sample_file_name: str,
+    activity_type: str | None,
+    activity_name: str | None,
+) -> bool:
+    """
+    Here entry_id and upload_id refer to the sample entry to be updated; archive is
+    from the activity that is referencing the sample.
+    Might create race condition (multiple activities referring to the same sample
+    entry), use carefully!!!
+
+    returns `False` if no upload found or authorization failed, `True` on success
+    """
+
+    from nomad.processing.data import Upload
+
+    user_id = archive.metadata.authors[0].user_id  # type: ignore
+    upload_with_sample = Upload.get(upload_id)
+
+    if upload_with_sample is None:
+        return False
+    is_coauthor = (
+        isinstance(upload_with_sample.coauthors, list)
+        and user_id in upload_with_sample.coauthors
+    )
+    is_authorized = upload_with_sample.main_author == user_id or is_coauthor
+    if not is_authorized:
+        return False
+
+    new_activity_ref = get_reference(
+        archive.metadata.upload_id,
+        archive.metadata.entry_id,  # pyright: ignore[reportArgumentType]
+    )
+    sample_archive = archive.m_context.load_archive(
+        entry_id, upload_id, archive.m_context.installation_url
+    )
+    sample_entry_needs_reprocessing = False
+    with sample_archive.m_context.update_entry(
+        sample_file_name, write=True, process=False
+    ) as sample_entry:
+        if 'activities_performed' not in sample_entry['data']:
+            sample_entry['data']['activities_performed'] = {}
+            sample_entry_needs_reprocessing = True
+        if activity_type not in sample_entry['data']['activities_performed']:
+            sample_entry['data']['activities_performed'][activity_type] = []
+            sample_entry_needs_reprocessing = True
+        # check if activity already listed
+        for old_activity in sample_entry['data']['activities_performed'][activity_type]:
+            if old_activity['reference'] == new_activity_ref:
+                break
+        else:
+            sample_entry['data']['activities_performed'][activity_type].append(
+                {
+                    'name': activity_name,
+                    'reference': new_activity_ref,
+                }
+            )
+            sample_entry_needs_reprocessing = True
+    if sample_entry_needs_reprocessing:
+        upload_with_sample.process_updated_raw_file(sample_file_name, allow_modify=True)
+
+    return True
+
+
+def update_sample_refs(  # noqa: PLR0913
     sample: UIBKSampleReference,
     archive: 'EntryArchive',
     logger: 'BoundLogger',
-    activity_type: str,
-    activity_name: str,
+    activity_type: str | None = None,
+    activity_name: str | None = None,
+    update_backward_refs: bool = False,
 ) -> None:
     """
     If sample reference has lab-id but no reference,
@@ -140,14 +208,22 @@ def update_sample_refs(
 
     Returns name and reference for the sample reference class
     """
-    from nomad.processing.data import Upload
     from nomad.search import MetadataPagination, search
 
+    if update_backward_refs and (activity_name is None or activity_type is None):
+        update_backward_refs = False
+        logger.warn(
+            'missing activity_name or activity_type, will not update backward refs'
+        )
+
     sample_id = str(sample.lab_id)
-    # TODO check that entry is UIBKSample in the query
-    query = {'results.eln.lab_ids': sample_id}
+    # TODO check that entry is UIBKSample or inherits from it in the query ?
+    query = {
+        'results.eln.lab_ids': sample_id,
+    }
     new_activity_ref = get_reference(
-        archive.metadata.upload_id, archive.metadata.entry_id
+        archive.metadata.upload_id,
+        archive.metadata.entry_id,  # pyright: ignore[reportArgumentType]
     )
     # find existing sample entry
     search_result = search(
@@ -158,16 +234,21 @@ def update_sample_refs(
     )
     # create new sample entry if none found
     if search_result.pagination.total == 0:
-        new_sample = UIBKSample(
-            lab_id=sample_id,
-            activities_performed=SampleActivities(
-                **{
-                    activity_type: [
-                        SectionReference(name=activity_name, reference=new_activity_ref)
-                    ]
-                }  # pyright: ignore[reportArgumentType]
-            ),
-        )
+        if update_backward_refs:
+            new_sample = UIBKSample(
+                lab_id=sample_id,
+                activities_performed=SampleActivities(
+                    **{
+                        activity_type: [
+                            SectionReference(
+                                name=activity_name, reference=new_activity_ref
+                            )
+                        ]
+                    }  # pyright: ignore[reportArgumentType]
+                ),
+            )
+        else:
+            new_sample = UIBKSample(lab_id=sample_id)
         sample_file_name = f'Sample_{sample_id}.archive.json'
         sample_ref = create_archive(
             entity=new_sample,
@@ -190,40 +271,22 @@ def update_sample_refs(
                 f'lab_id: "{sample_id}". Will use the first one found.'
             )
         # update activities performed in sample entry
-        sample_archive = archive.m_context.load_archive(
-            entry_id, upload_id, archive.m_context.installation_url
-        )
-        sample_entry_needs_reprocessing = False
-        with sample_archive.m_context.update_entry(
-            sample_file_name, write=True, process=False
-        ) as sample_entry:
-            if 'activities_performed' not in sample_entry['data']:
-                sample_entry['data']['activities_performed'] = {}
-                sample_entry_needs_reprocessing = True
-            if activity_type not in sample_entry['data']['activities_performed']:
-                sample_entry['data']['activities_performed'][activity_type] = []
-                sample_entry_needs_reprocessing = True
-            # check if activity already listed
-            for old_activity in sample_entry['data']['activities_performed'][
-                activity_type
-            ]:
-                if old_activity['reference'] == new_activity_ref:
-                    break
-            else:
-                sample_entry['data']['activities_performed'][activity_type].append(
-                    {
-                        'name': activity_name,
-                        'reference': new_activity_ref,
-                    }
-                )
-                sample_entry_needs_reprocessing = True
-        if sample_entry_needs_reprocessing:
-            upload_with_sample = Upload.get(upload_id)
-            # TODO: check user access rights here
-            upload_with_sample.process_updated_raw_file(
-                sample_file_name, allow_modify=True
+        # potential race conditions if multiple activities refer to the same sample
+        if update_backward_refs:
+            back_refs_status = update_backward_refs_in_sample(
+                entry_id,
+                upload_id,
+                archive,
+                sample_file_name,
+                activity_type,
+                activity_name,
             )
+            if not back_refs_status:
+                logger.warn(
+                    'Could not update backward references in sample entry with id '
+                    + f'{entry_id} and upload id {upload_id} - no upload found or '
+                    + 'authorization failed.'
+                )
 
     sample.name = sample_file_name
     sample.reference = sample_ref
-    # return sample_file_name, sample_ref

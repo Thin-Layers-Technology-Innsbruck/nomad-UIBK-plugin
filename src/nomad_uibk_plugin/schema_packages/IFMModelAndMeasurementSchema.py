@@ -38,7 +38,7 @@ from pint import UnitRegistry
 
 from nomad_uibk_plugin.schema_packages import UIBKCategory
 from nomad_uibk_plugin.schema_packages.sample import UIBKSampleReference
-from nomad_uibk_plugin.utils import update_sample_refs, get_reference
+from nomad_uibk_plugin.utils import update_sample_refs
 
 if TYPE_CHECKING:
     from nomad.datamodel import EntryArchive
@@ -180,6 +180,7 @@ class IFMMeasurement(ELNMeasurement):
                     logger=logger,
                     activity_type='ifm_measurement',
                     activity_name=self.name,
+                    update_backward_refs=False,
                 )
 
             elif sample.reference is not None:

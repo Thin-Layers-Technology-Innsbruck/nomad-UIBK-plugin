@@ -81,25 +81,25 @@ class UIBK_JVMeasurement(JVMeasurement, EntryData):
         Read the JV measurement file and extract the data and metadata.
         """
 
-        # Update sample references
-        # !!! currently broken due to updates in utils.py TODO fix later
-        # for sample in self.samples:
-        #     if sample.lab_id is not None and sample.reference is None:
-        #         sample_file_name, sample_ref = update_sample_refs(
-        #             sample_id=sample.lab_id, # pyright: ignore[reportAttributeAccessIssue]
-        #             archive=archive,
-        #             logger=logger,
-        #         )
-        #         sample.name = sample_file_name
-        #         sample.reference = sample_ref
-        #     elif sample.reference is not None and sample.lab_id is None:
-        #         sample.lab_id = sample.reference.lab_id
-            
-        #     if sample.reference is not None and sample.name is None:
-        #         sample.name = sample.reference.name
-
         super().normalize(archive, logger)
         archive.metadata.entry_name = self.name
+
+        for sample in self.samples:
+            if sample.lab_id is not None and sample.reference is None:
+                update_sample_refs(
+                    sample=sample,  # pyright: ignore[reportArgumentType]
+                    archive=archive,
+                    logger=logger,
+                    activity_type='jv_measurement',
+                    activity_name=self.name,
+                    update_backward_refs=False,
+                )
+
+            elif sample.reference is not None:
+                if sample.lab_id is None:
+                    sample.lab_id = sample.reference.lab_id
+                if sample.name is None:
+                    sample.name = sample.reference.name
 
 
 m_package.__init_metainfo__()
