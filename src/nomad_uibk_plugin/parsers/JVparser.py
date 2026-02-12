@@ -127,6 +127,7 @@ class JVParser(MatchingParser):
                     ),  # divide by area later if not None
                     series_resistance=safe_float(source_data['rs']),
                     shunt_resistance=safe_float(source_data['rp']),
+                    # multiply rs and rp by area later if not None
                 )
             except Exception as e:
                 logger.warning(f'entry {source_data["label"]} skipped due to {e}')
@@ -135,6 +136,12 @@ class JVParser(MatchingParser):
                 jv_curve.current_density_at_maximum_power_point = (
                     jv_curve.current_density_at_maximum_power_point / active_area_cm2
                 )  # pyright: ignore[reportOperatorIssue]
+            if jv_curve.series_resistance:
+                jv_curve.series_resistance = (
+                    jv_curve.series_resistance * active_area_cm2
+                )  # pyright: ignore[reportOperatorIssue]
+            if jv_curve.shunt_resistance:
+                jv_curve.shunt_resistance = jv_curve.shunt_resistance * active_area_cm2  # pyright: ignore[reportOperatorIssue]
 
             try:
                 dark_jv_curve = SolarCellJVCurveDark(
@@ -149,10 +156,19 @@ class JVParser(MatchingParser):
                     voltage=source_data['calculationValues']['uDark'],
                     series_resistance=safe_float(source_data['darkRs']),
                     shunt_resistance=safe_float(source_data['darkRp']),
+                    # multiply rs and rp by area later if not None
                 )
             except Exception as e:
                 logger.warning(f'entry {source_data["label"]} skipped due to {e}')
                 continue
+            if dark_jv_curve.series_resistance:
+                dark_jv_curve.series_resistance = (
+                    dark_jv_curve.series_resistance * active_area_cm2
+                )  # pyright: ignore[reportOperatorIssue]
+            if dark_jv_curve.shunt_resistance:
+                dark_jv_curve.shunt_resistance = (
+                    dark_jv_curve.shunt_resistance * active_area_cm2
+                )  # pyright: ignore[reportOperatorIssue]
 
             entry_old_found = False
             for entry_old in entries:
