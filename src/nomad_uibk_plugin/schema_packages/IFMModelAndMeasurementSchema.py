@@ -16,7 +16,6 @@
 # limitations under the License.
 #
 
-import re
 from typing import (
     TYPE_CHECKING,
 )
@@ -153,23 +152,14 @@ class IFMMeasurement(ELNMeasurement):
         - Read the metadata file and extract information from it.
         - Update the sample references if lab_id is given.
         """
+        # for key in archive.metadata.__dict__.keys():
+        #     print(key, archive.metadata.__dict__[key])
+        if self.name is None:
+            self.name = (
+                archive.metadata.mainfile.split('/')[-1].split('.')[0].replace('_', ' ')
+            )
 
-        self.method = 'IFM Measurement'
-
-        # find corresponding data files
-        bmp_name = re.sub(r'\.archive\.json$', '', archive.metadata.mainfile) + '.bmp'
-        xml_name = (
-            re.sub(r'texture\.archive\.json$', '', archive.metadata.mainfile)
-            + 'info.xml'
-        )
-
-        from nomad.processing.data import Entry
-
-        for entry in Entry.objects(upload_id=archive.metadata.upload_id):
-            if entry.mainfile == bmp_name:
-                self.image_file = bmp_name
-            if entry.mainfile == xml_name:
-                self.metadata_file = xml_name
+        archive.metadata.entry_name = self.name
 
         # Read metadata from file
         if self.metadata_file is not None:
@@ -183,17 +173,23 @@ class IFMMeasurement(ELNMeasurement):
 
         # Update sample references
         for sample in self.samples:
-            sample_file_name, sample_ref = update_sample_refs(
-                sample=sample,  # pyright: ignore[reportArgumentType]
-                archive=archive,
-                logger=logger,
-            )
-            if (sample_file_name is not None) and (sample_ref is not None):
-                sample.name = sample_file_name
-                sample.reference = sample_ref
+            if sample.lab_id is not None and sample.reference is None:
+                update_sample_refs(
+                    sample=sample,  # pyright: ignore[reportArgumentType]
+                    archive=archive,
+                    logger=logger,
+                    activity_type='ifm_measurement',
+                    activity_name=self.name,
+                    update_backward_refs=False,
+                )
+
+            elif sample.reference is not None:
+                if sample.lab_id is None:
+                    sample.lab_id = sample.reference.lab_id
+                if sample.name is None:
+                    sample.name = sample.reference.name
 
         super().normalize(archive, logger)
-        archive.metadata.entry_name = self.name
 
 
 class IFMModel(Entity, EntryData):
@@ -238,16 +234,6 @@ class IFMModel(Entity, EntryData):
         """
         Read the model file and extract the metadata.
         """
-        self.method = 'IFM Model'
-
-        # find corresponding data files
-        source_name = re.sub(r'\.archive\.json$', '', archive.metadata.mainfile) + '.pt'
-
-        from nomad.processing.data import Entry
-
-        for entry in Entry.objects(upload_id=archive.metadata.upload_id):
-            if entry.mainfile == source_name:
-                self.file = source_name
 
         super().normalize(archive, logger)
         archive.metadata.entry_name = self.name

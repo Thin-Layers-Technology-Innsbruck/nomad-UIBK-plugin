@@ -37,9 +37,12 @@ locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
 
 
 def parse_xml_sample_id(sample_id: str) -> str | None:
-    match = re.compile(r'^(\d{8})_A(\d+)[_-](\d+)m.*$').match(sample_id)
+    match = re.compile(r'^(\d{8})_A(\d+)(?:[_-](\d+))?.*$').match(sample_id)
     if match:
-        return f'{match.group(1)}_{match.group(2)}-{match.group(3)}'
+        if match.group(3):
+            return f'{match.group(1)}_{match.group(2)}-{match.group(3)}'
+        else:
+            return f'{match.group(1)}_{match.group(2)}-1'
     else:
         return None
 

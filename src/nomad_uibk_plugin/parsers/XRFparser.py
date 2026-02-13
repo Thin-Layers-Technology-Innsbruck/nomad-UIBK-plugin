@@ -5,9 +5,9 @@ from nomad.datamodel.data import EntryData
 from nomad.datamodel.metainfo.annotations import ELNAnnotation
 from nomad.metainfo import Quantity
 from nomad.parsing.parser import MatchingParser
-from nomad_measurements.utils import create_archive
 
 from nomad_uibk_plugin.schema_packages.XRFschema import ELNXRayFluorescence
+from nomad_uibk_plugin.utils import create_archive
 
 if TYPE_CHECKING:
     from nomad.datamodel.datamodel import EntryArchive
@@ -42,7 +42,7 @@ class XRFParser(MatchingParser):
         child_archives: dict[str, 'EntryArchive'] = None,
     ) -> None:
         logger.info('XRFParser.parse')
-        data_file = mainfile.split('/')[-1]
+        data_file = mainfile.rsplit('/', maxsplit=1)[-1]
         entry = ELNXRayFluorescence.m_from_dict(ELNXRayFluorescence.m_def.a_template)
         entry.data_file = data_file
         file_name = f'{"".join(data_file.split(".")[:-1])}.archive.json'

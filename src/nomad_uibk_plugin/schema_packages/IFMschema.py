@@ -127,6 +127,18 @@ class IFMTwoStepAnalysisResult(Entity, PlotSection, EntryData):
     )
 
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+        from nomad_uibk_plugin.utils import update_sample_refs
+
+        if self.sample and self.sample.lab_id:
+            update_sample_refs(
+                sample=self.sample,  # pyright: ignore[reportArgumentType]
+                archive=archive,
+                logger=logger,
+                activity_type='ifm_analysis',
+                activity_name=self.name,
+                update_backward_refs=False,
+            )
+
         super().normalize(archive, logger)
         self.name = self.name.split('.')[0].replace('_', ' ')  # type: ignore
         archive.metadata.entry_name = self.name
@@ -293,12 +305,19 @@ class IFMTwoStepAnalysis(ELNAnalysis):
     )
 
     def check_results(self, archive: 'EntryArchive', logger: 'BoundLogger'):
-        if self.trigger_get_status and self.triggered_inference:
+        if (
+            self.trigger_get_status
+            and self.triggered_inference
+            and self.triggered_inference.action_id
+            and self.triggered_inference.status != 'COMPLETED'
+        ):
+            self.trigger_get_status = False
+
             try:
                 status = get_action_status(
-                    self.triggered_inference.action_id,
-                    archive.metadata.authors[0].user_id,
-                )  # noqa: E501
+                    self.triggered_inference.action_id,  # pyright: ignore[reportArgumentType]
+                    archive.metadata.authors[0].user_id,  # type: ignore
+                )
                 if status:
                     self.triggered_inference.status = status.name
             except Exception as e:
@@ -365,7 +384,10 @@ class IFMTwoStepAnalysis(ELNAnalysis):
         if self.inputs and self.model:
             logger.info('Model found. Ready for IFM Two Step Analysis.')
 
-            if self.trigger_run_action:
+            if self.trigger_run_action and (
+                self.triggered_inference is None
+                or self.triggered_inference.status != 'RUNNING'
+            ):
                 # remove subsections corresponding to previous runs
                 self.outputs = []
                 binary_source_path = self.find_source_path_from_ref(self.model, '.pt')
@@ -420,6 +442,19 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                 # 'unclick' buttons
                 self.trigger_run_action = False
                 self.overwrite_existing_results = False
+                # avoiding multiple triggers due to possible race conditions
+                mainfile = archive.metadata.mainfile
+                with archive.m_context.update_entry(
+                    mainfile,  # pyright: ignore[reportArgumentType]
+                    write=True,
+                    process=False,
+                ) as entry:
+                    try:
+                        entry['data']['trigger_run_action'] = False
+                    except KeyError:
+                        logger.warning(
+                            'trigger_run_action not found in the archive during reset.'
+                        )
 
                 # Execute action that runs Georgs code to extract the defects
                 # and creates results entries
