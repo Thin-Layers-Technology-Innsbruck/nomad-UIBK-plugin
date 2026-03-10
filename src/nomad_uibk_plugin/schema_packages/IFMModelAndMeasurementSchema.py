@@ -32,7 +32,7 @@ from nomad.datamodel.metainfo.basesections import (
     ReadableIdentifiers,
 )
 from nomad.datamodel.metainfo.eln import ELNMeasurement
-from nomad.metainfo import Datetime, MEnum, Quantity, SchemaPackage, Section, SubSection
+from nomad.metainfo import Datetime, Quantity, SchemaPackage, Section, SubSection
 from nomad_measurements.utils import merge_sections
 from pint import UnitRegistry
 

@@ -117,7 +117,7 @@ def parse_description_field(description: str) -> dict:
 
 def extract_from_pt_model(file, logger) -> dict:  # noqa: PLR0912, PLR0915
     """
-    Extracts metadata from PyTorch model file without loading full model or using PyTorch/Ultralytics.
+    Extracts metadata from PyTorch model file without loading model or using PyTorch.
     Returns dictionary with metadata.
     """
 
