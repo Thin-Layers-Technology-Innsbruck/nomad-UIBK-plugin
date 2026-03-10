@@ -39,7 +39,7 @@ dependencies = [
 Repository = "https://github.com/Thin-Layers-Technology-Innsbruck/nomad-UIBK-plugin"
 
 [tool.uv]
-prerelease = "allow"  # Allows pre-release/dev versions
+prerelease = "explicit"  # Allows pre-release/dev versions
 index-url = "https://gitlab.mpcdf.mpg.de/api/v4/projects/2187/packages/pypi/simple"
 
 [project.optional-dependencies]
