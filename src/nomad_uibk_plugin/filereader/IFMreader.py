@@ -17,8 +17,10 @@
 #
 
 import locale
+import pickletools
 import re
 import xml.etree.ElementTree as ET
+import zipfile
 from datetime import datetime
 from typing import TYPE_CHECKING, TextIO
 
@@ -109,6 +111,94 @@ def parse_description_field(description: str) -> dict:
             elif key in ['start_time', 'end_time']:
                 metadata[key] = datetime.strptime(match.group(1), '%d. %B %Y %H:%M:%S')
             # todo: add more elifs for other keys
+
+    return metadata
+
+
+def extract_from_pt_model(file, logger) -> dict:  # noqa: PLR0912, PLR0915
+    """
+    Extracts metadata from PyTorch model file without loading model or using PyTorch.
+    Returns dictionary with metadata.
+    """
+
+    with zipfile.ZipFile(file, 'r') as zip_f:
+        if 'data.pkl' in zip_f.namelist():
+            data = zip_f.read('data.pkl')
+        elif 'best/data.pkl' in zip_f.namelist():
+            data = zip_f.read('best/data.pkl')
+        elif 'last/data.pkl' in zip_f.namelist():
+            data = zip_f.read('last/data.pkl')
+        else:
+            logger.error(f'No data.pkl found in .pt archive for {file}')
+            return None
+
+    context = []
+    metadata = {}
+    collecting_names = False
+    names_tmp = {}
+    last_int = 0
+
+    # we do not unpickle the data - potentially unsafe operation
+    # instead we attempt to extract some metadata by analyzing the pickle opcodes
+    for opcode, arg, _ in pickletools.genops(data):
+        op = opcode.name
+
+        if op in ('SHORT_BINUNICODE', 'BINUNICODE', 'UNICODE'):
+            if context == ['version']:
+                metadata['version'] = arg
+                context = []
+
+            elif context == ['date']:
+                metadata['date'] = arg
+                context = []
+
+            if arg in ('model', 'yaml', 'train_args'):
+                context.append(arg)
+
+            elif arg == 'version':
+                context = ['version']
+
+            elif arg == 'date':
+                context = ['date']
+
+            elif arg == 'imgsz':
+                context = ['imgsz']
+
+            elif arg == 'epochs' and 'train_args' in context:
+                context = ['train_args', 'epochs']
+
+            elif arg == 'nc' and 'model' in context and 'yaml' in context:
+                context = ['model', 'yaml', 'nc']
+
+            elif arg == 'names':
+                collecting_names = True
+                names_tmp = {}
+
+            elif collecting_names:
+                names_tmp[last_int] = arg
+
+        elif op in ('BININT', 'BININT1', 'BININT2'):
+            if context == ['imgsz']:
+                metadata['imgsz'] = arg
+                context = []
+
+            elif context == ['train_args', 'epochs']:
+                metadata['train_args.epochs'] = arg
+                context = []
+
+            elif context == ['model', 'yaml', 'nc']:
+                metadata['model.yaml.nc'] = arg
+                context = []
+
+            elif collecting_names:
+                last_int = arg
+
+        elif op == 'BINFLOAT':
+            pass
+
+        if collecting_names and op == 'SETITEMS':
+            metadata['model.names'] = names_tmp
+            collecting_names = False
 
     return metadata
 

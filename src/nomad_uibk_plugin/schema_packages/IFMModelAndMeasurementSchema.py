@@ -32,7 +32,7 @@ from nomad.datamodel.metainfo.basesections import (
     ReadableIdentifiers,
 )
 from nomad.datamodel.metainfo.eln import ELNMeasurement
-from nomad.metainfo import Datetime, MEnum, Quantity, SchemaPackage, Section, SubSection
+from nomad.metainfo import Datetime, Quantity, SchemaPackage, Section, SubSection
 from nomad_measurements.utils import merge_sections
 from pint import UnitRegistry
 
@@ -152,8 +152,6 @@ class IFMMeasurement(ELNMeasurement):
         - Read the metadata file and extract information from it.
         - Update the sample references if lab_id is given.
         """
-        # for key in archive.metadata.__dict__.keys():
-        #     print(key, archive.metadata.__dict__[key])
         if self.name is None:
             self.name = (
                 archive.metadata.mainfile.split('/')[-1].split('.')[0].replace('_', ' ')
@@ -215,19 +213,30 @@ class IFMModel(Entity, EntryData):
         a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
     )
 
-    # Metadata Quantities
-    type = Quantity(
-        type=MEnum('binary', 'classification'), description='Type of the model.'
+    ultralytics_version = Quantity(
+        type=str,
     )
 
-    number_of_layers = Quantity(
-        type=int,
-        description='Number of layers in the model.',
+    training_datetime = Quantity(
+        type=Datetime,
+        description='The date and time of the model training.',
+        # a_eln=dict(component='DateTimeEditQuantity'),
     )
 
-    number_of_parameters = Quantity(
+    number_of_epochs = Quantity(
         type=int,
-        description='Number of parameters in the model.',
+        description='Number of epochs in the model training.',
+    )
+
+    number_of_classes = Quantity(
+        type=int,
+        description='Number of classes the model can predict.',
+    )
+
+    names_of_classes = Quantity(
+        type=str,
+        description='Names of the classes the model can predict.',
+        shape=['*'],
     )
 
     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
@@ -235,8 +244,34 @@ class IFMModel(Entity, EntryData):
         Read the model file and extract the metadata.
         """
 
-        super().normalize(archive, logger)
+        if self.name is None:
+            self.name = (
+                archive.metadata.mainfile.split('/')[-1].split('.')[0].replace('_', ' ')
+            )
         archive.metadata.entry_name = self.name
+
+        if self.file is not None:
+            logger.info('Extracting metadata from the model file...')
+
+            from nomad_uibk_plugin.filereader.IFMreader import extract_from_pt_model
+
+            metadata = extract_from_pt_model(
+                archive.m_context.raw_path() + '/' + self.file, logger
+            )
+
+            if metadata is not None:
+                self.number_of_epochs = metadata.get('train_args.epochs', None)
+                self.ultralytics_version = metadata.get('version', None)
+                self.training_datetime = metadata.get('date', None)
+                self.number_of_classes = metadata.get('model.yaml.nc', None)
+                names_of_classes = metadata.get('model.names', None)
+                if names_of_classes is not None:
+                    if isinstance(names_of_classes, dict):
+                        self.names_of_classes = [
+                            name for name in names_of_classes.values()
+                        ]
+
+        super().normalize(archive, logger)
 
 
 class IFMMeasurementReference(EntityReference):
