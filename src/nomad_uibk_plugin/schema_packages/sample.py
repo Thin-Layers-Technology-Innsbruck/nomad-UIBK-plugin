@@ -5,8 +5,16 @@ from nomad.datamodel.data import (
     ArchiveSection,
     EntryData,
 )
-from nomad.datamodel.metainfo.annotations import ELNAnnotation, ELNComponentEnum
-from nomad.datamodel.metainfo.basesections import CompositeSystem, SectionReference
+from nomad.datamodel.metainfo.annotations import (
+    ELNAnnotation,
+    ELNComponentEnum,
+    SectionProperties,
+)
+from nomad.datamodel.metainfo.basesections import (
+    CompositeSystem,
+    Entity,
+    SectionReference,
+)
 from nomad.datamodel.metainfo.plot import PlotlyFigure, PlotSection
 from nomad.metainfo import Quantity, SchemaPackage, Section, SubSection
 from nomad_pvcomb.schema_packages.activities import Object
@@ -242,6 +250,43 @@ class UIBKSampleReference(Object):
         # Update name
         if self.reference and self.name is None:
             self.name = self.reference.name
+
+
+class UIBKExperimentalPlan(Entity, EntryData):
+    """
+    Section that describes experimental plans.
+    """
+
+    # For now, only contains references to samples, can be extended
+    # in the future to add info from xls files for the experimental plan
+    m_def = Section(
+        categories=[UIBKCategory],
+        label='UIBK Experimental Plan',
+        a_eln=ELNAnnotation(
+            properties=SectionProperties(
+                order=[
+                    'name',
+                    'datetime',
+                    'lab_id',
+                    'description',
+                    'sample_reference',
+                ]
+            )
+        ),
+    )
+
+    sample_reference = Quantity(
+        type=UIBKSample,
+        shape=['*'],
+        description='Reference to an UIBK sample that belongs to the experiment plan.',
+        a_eln=ELNAnnotation(
+            component='ReferenceEditQuantity',
+            label='link to sample',
+        ),
+    )
+
+    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+        super().normalize(archive, logger)
 
 
 m_package.__init_metainfo__()
