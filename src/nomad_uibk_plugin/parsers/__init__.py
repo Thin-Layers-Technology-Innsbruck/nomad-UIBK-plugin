@@ -17,7 +17,7 @@ xrfparser = XRFParserEntryPoint(
     name='XRFParser',
     description='XRF Parser for UIBK .txt files.',
     mainfile_name_re=r'.*\.txt',
-    mainfile_content_re=r'PositionType\s+Application\s+Sample\s+name\s+Date\s+\n[A-Z0-9-]+\s+Quant\s+analysis',
+    mainfile_contents_re=r'PositionType\s+Application\s+Sample\s+name\s+Date\s+\n[A-Z0-9-]+\s+Quant\s+analysis',
 )
 
 # # Microcell parser entry points
@@ -37,7 +37,7 @@ xrfparser = XRFParserEntryPoint(
 #     name='EBICParser',
 #     description='Parser for EBIC tiff files.',
 #     mainfile_name_re='.*\.(tif|tiff)',
-#     mainfile_content_re='pointelectronic\.com',
+#     mainfile_contents_re='pointelectronic\.com',
 # )
 
 
