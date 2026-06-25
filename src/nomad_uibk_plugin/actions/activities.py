@@ -7,10 +7,9 @@ import h5py
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
-from nomad.app.v1.routers.uploads import get_upload_with_read_access
-from nomad.datamodel import User
 from nomad.datamodel.metainfo.plot import PlotlyFigure
-from nomad.processing.data import Entry
+from nomad.processing.data import Entry, Upload
+from nomad.utils import hash
 from PIL import Image
 from temporalio import activity
 
@@ -279,31 +278,42 @@ async def read_file_and_write_archive(writer_input: WriteArchiveInput):  # noqa:
 
     # add the new .archive.json entry to the upload
     fname = os.path.join(result_name + '.archive.json')
-    with open(fname, 'w', encoding='utf-8') as f:
+    
+    # put it into a temporary directory 
+    # necessary for `upload.process_upload()` to work correctly later on
+    # the temp dir will be removed automatically after the upload is processed
+    temp_dir = hash(fname, length=16)
+    temp_dir_full_path = fname.rsplit('/', 1)[0] + f'/{temp_dir}'
+    fname_with_temp_dir = f'/{temp_dir}/'.join(fname.rsplit('/', 1))
+
+    if not os.path.exists(temp_dir_full_path):
+        os.mkdir(temp_dir_full_path)
+
+    with open(fname_with_temp_dir, 'w', encoding='utf-8') as f:
         json.dump({'data': result_entry.m_to_dict(with_root_def=True)}, f, indent=4)
 
-    return fname
+    return fname_with_temp_dir
 
 
 @activity.defn
 async def process_new_files(data: ProcessNewFilesInput):
+    from nomad.actions.manager import get_upload_files
+
     file_operations = []
     mainfile_names = []
 
     for path in data.result_path:
         target_dir = path.split('/raw/')[-1]
-        mainfile_names.append(target_dir)
-        target_dir = '/'.join(target_dir.split('/')[:-1])
+        mainfile_names.append('/'.join(target_dir.split('/')[:-2] + target_dir.split('/')[-1:]))
+        target_dir = '/'.join(target_dir.split('/')[:-2])
         file_operations.append(
-            dict(op='ADD', path=path, target_dir=target_dir, temporary=False)
+            dict(op='ADD', path=path, target_dir=target_dir, temporary=True)
         )
 
     for i in range(MAX_ATTEMPT_NUM):
-        upload = get_upload_with_read_access(
-            data.upload_id,
-            User(user_id=data.user_id),
-            include_others=True,
-        )
+        # check authorization and get the upload object
+        get_upload_files(data.upload_id, data.user_id)
+        upload = Upload.get(data.upload_id)
 
         if not upload.process_running:
             break
