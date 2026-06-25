@@ -278,8 +278,8 @@ async def read_file_and_write_archive(writer_input: WriteArchiveInput):  # noqa:
 
     # add the new .archive.json entry to the upload
     fname = os.path.join(result_name + '.archive.json')
-    
-    # put it into a temporary directory 
+
+    # put it into a temporary directory
     # necessary for `upload.process_upload()` to work correctly later on
     # the temp dir will be removed automatically after the upload is processed
     temp_dir = hash(fname, length=16)
@@ -304,7 +304,9 @@ async def process_new_files(data: ProcessNewFilesInput):
 
     for path in data.result_path:
         target_dir = path.split('/raw/')[-1]
-        mainfile_names.append('/'.join(target_dir.split('/')[:-2] + target_dir.split('/')[-1:]))
+        mainfile_names.append(
+            '/'.join(target_dir.split('/')[:-2] + target_dir.split('/')[-1:])
+        )
         target_dir = '/'.join(target_dir.split('/')[:-2])
         file_operations.append(
             dict(op='ADD', path=path, target_dir=target_dir, temporary=True)
