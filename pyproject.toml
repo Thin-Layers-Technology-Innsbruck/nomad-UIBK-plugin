@@ -34,6 +34,8 @@ dependencies = [
     "plotly",
     "pillow",
     "opentelemetry-instrumentation-asgi==0.63b1",    # temp bugfix - explicit dependency from nomad-lab not picked up
+    "opentelemetry-instrumentation-elasticsearch==0.63b1",    # temp bugfix - explicit dependency from nomad-lab not picked up
+    "opentelemetry-instrumentation-pymongo==0.63b1",    # temp bugfix - explicit dependency from nomad-lab not picked up
 ]
 
 [project.urls]
