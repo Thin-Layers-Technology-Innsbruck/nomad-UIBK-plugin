@@ -34,7 +34,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync --extra dev
+          uv sync --prerelease=allow --extra dev
       - name: Run tests with pytest
         run: |
           uv run --with coverage coverage run -m pytest -sv
