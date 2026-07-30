@@ -23,19 +23,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python_version }}
 
-      - name: Install UV tool
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-
       - name: Install dependencies
         run: |
-          uv sync --prerelease=explicit --extra dev
+          uv sync --all-extras
       - name: Run tests with pytest
         run: |
           uv run --with coverage coverage run -m pytest -sv
