@@ -9,6 +9,7 @@ on:
   workflow_dispatch:
 
 env:
+  UV_VERSION: 0.9
   UV_SYSTEM_PYTHON: true
 
 jobs:
