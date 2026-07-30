@@ -33,6 +33,7 @@ dependencies = [
     "pandas",
     "plotly",
     "pillow",
+    "opentelemetry-semantic-conventions==0.63b1",    # temp bugfix - explicit dependency from nomad-lab not picked up
     "opentelemetry-instrumentation==0.63b1",    # temp bugfix - explicit dependency from nomad-lab not picked up
     "opentelemetry-instrumentation-asgi==0.63b1",    # temp bugfix - explicit dependency from nomad-lab not picked up
     "opentelemetry-instrumentation-elasticsearch==0.63b1",    # temp bugfix - explicit dependency from nomad-lab not picked up
