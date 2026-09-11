@@ -1,7 +1,9 @@
+import os
 from typing import TYPE_CHECKING
 
 from nomad.config import config
 from nomad.parsing.parser import MatchingParser
+from nomad_ml_workflows.schema_packages.model import ModelArtifact
 
 from nomad_uibk_plugin.schema_packages.IFMModelAndMeasurementSchema import (
     IFMMeasurement,
@@ -116,8 +118,25 @@ class IFMModelParser(MatchingParser):
                 model_entry['data'] = new_empty_entry.m_to_dict(with_root_def=True)
                 logger.info(f'IFMModel entry {file_name} created.')
                 reprocessing_needed = True
-            if model_entry['data'].get('file') is None:
-                model_entry['data']['file'] = data_file
+            if (
+                model_entry['data'].get('artifacts') is None
+                or len(model_entry['data']['artifacts']) != 1
+            ):
+                model_entry['data']['artifacts'] = [
+                    ModelArtifact().m_to_dict(with_root_def=True)
+                ]
+                logger.info(f'ModelArtifact subsection added for {file_name}.')
+                reprocessing_needed = True
+            if model_entry['data']['artifacts'][0].get('model_file') is None:
+                model_entry['data']['artifacts'][0]['model_file'] = data_file
+                reprocessing_needed = True
+            if model_entry['data']['artifacts'][0].get('format') is None:
+                model_entry['data']['artifacts'][0]['format'] = 'PyTorch'
+                reprocessing_needed = True
+            if model_entry['data']['artifacts'][0].get('file_size') is None:
+                model_entry['data']['artifacts'][0]['file_size'] = os.path.getsize(
+                    mainfile
+                )
                 reprocessing_needed = True
 
         if reprocessing_needed:
