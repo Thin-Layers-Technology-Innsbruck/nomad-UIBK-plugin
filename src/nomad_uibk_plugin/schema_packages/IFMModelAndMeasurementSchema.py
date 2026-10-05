@@ -20,20 +20,19 @@ from typing import (
     TYPE_CHECKING,
 )
 
-from nomad.datamodel.data import EntryData
 from nomad.datamodel.metainfo.annotations import (
     ELNAnnotation,
     ELNComponentEnum,
     SectionProperties,
 )
 from nomad.datamodel.metainfo.basesections import (
-    Entity,
     EntityReference,
     ReadableIdentifiers,
 )
 from nomad.datamodel.metainfo.eln import ELNMeasurement
 from nomad.metainfo import Datetime, Quantity, SchemaPackage, Section, SubSection
 from nomad_measurements.utils import merge_sections
+from nomad_ml_workflows.schema_packages.model import Library, MLModel, Training
 from pint import UnitRegistry
 
 from nomad_uibk_plugin.schema_packages import UIBKCategory
@@ -110,7 +109,7 @@ class IFMMeasurement(ELNMeasurement):
     # Overwrite datetime with new label and description
     datetime = Quantity(
         type=Datetime,
-        desription='The date and time when this entry was last processed.',
+        description='The date and time when this entry was last processed.',
         a_eln=dict(label='entry processing time', component='DateTimeEditQuantity'),
     )
 
@@ -190,7 +189,7 @@ class IFMMeasurement(ELNMeasurement):
         super().normalize(archive, logger)
 
 
-class IFMModel(Entity, EntryData):
+class IFMModel(MLModel):
     """
     Model for the automated image analysis.
     """
@@ -207,27 +206,6 @@ class IFMModel(Entity, EntryData):
         section_def=ReadableIdentifiers,
     )
 
-    file = Quantity(
-        type=str,
-        description='File containing the data.',
-        a_eln=ELNAnnotation(component=ELNComponentEnum.FileEditQuantity),
-    )
-
-    ultralytics_version = Quantity(
-        type=str,
-    )
-
-    training_datetime = Quantity(
-        type=Datetime,
-        description='The date and time of the model training.',
-        # a_eln=dict(component='DateTimeEditQuantity'),
-    )
-
-    number_of_epochs = Quantity(
-        type=int,
-        description='Number of epochs in the model training.',
-    )
-
     number_of_classes = Quantity(
         type=int,
         description='Number of classes the model can predict.',
@@ -239,7 +217,7 @@ class IFMModel(Entity, EntryData):
         shape=['*'],
     )
 
-    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):  # noqa: PLR0912
         """
         Read the model file and extract the metadata.
         """
@@ -250,19 +228,43 @@ class IFMModel(Entity, EntryData):
             )
         archive.metadata.entry_name = self.name
 
-        if self.file is not None:
+        if self.artifacts is not None and self.artifacts[0].model_file is not None:
             logger.info('Extracting metadata from the model file...')
 
             from nomad_uibk_plugin.filereader.IFMreader import extract_from_pt_model
 
             metadata = extract_from_pt_model(
-                archive.m_context.raw_path() + '/' + self.file, logger
+                archive.m_context.raw_path() + '/' + self.artifacts[0].model_file,
+                logger,
             )
 
             if metadata is not None:
-                self.number_of_epochs = metadata.get('train_args.epochs', None)
-                self.ultralytics_version = metadata.get('version', None)
-                self.training_datetime = metadata.get('date', None)
+                self.datetime = metadata.get('date', None)
+
+                epochs = metadata.get('train_args.epochs', None)
+                if epochs is not None:
+                    if self.training is None:
+                        self.training = Training(epochs=epochs)
+                    else:
+                        self.training.epochs = epochs
+
+                ultralytics_version = metadata.get('version', None)
+                if ultralytics_version is not None:
+                    if self.libraries is None:
+                        self.libraries = []
+                    for library in self.libraries:
+                        if library.name == 'ultralytics':
+                            library.version = ultralytics_version
+                            break
+                    else:
+                        self.libraries.append(
+                            Library(name='ultralytics', version=ultralytics_version)
+                        )
+                    if 'yolov8' not in [library.name for library in self.libraries]:
+                        self.libraries.append(Library(name='yolov8'))
+
+                    self.license = 'AGPL-3.0'
+
                 self.number_of_classes = metadata.get('model.yaml.nc', None)
                 names_of_classes = metadata.get('model.names', None)
                 if names_of_classes is not None:
