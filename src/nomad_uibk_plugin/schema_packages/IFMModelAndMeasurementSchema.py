@@ -32,7 +32,7 @@ from nomad.datamodel.metainfo.basesections import (
 from nomad.datamodel.metainfo.eln import ELNMeasurement
 from nomad.metainfo import Datetime, Quantity, SchemaPackage, Section, SubSection
 from nomad_measurements.utils import merge_sections
-from nomad_ml_workflows.schema_packages.model import MLModel, Training
+from nomad_ml_workflows.schema_packages.model import Library, MLModel, Training
 from pint import UnitRegistry
 
 from nomad_uibk_plugin.schema_packages import UIBKCategory
@@ -217,7 +217,7 @@ class IFMModel(MLModel):
         shape=['*'],
     )
 
-    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):
+    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger'):  # noqa: PLR0912
         """
         Read the model file and extract the metadata.
         """
@@ -250,10 +250,19 @@ class IFMModel(MLModel):
 
                 ultralytics_version = metadata.get('version', None)
                 if ultralytics_version is not None:
-                    self.library = 'ultralytics'
-                    self.tags = ['yolov8']
-                    self.library_version = ultralytics_version.split('.')[0]
-                    self.model_version = ultralytics_version
+                    if self.libraries is None:
+                        self.libraries = []
+                    for library in self.libraries:
+                        if library.name == 'ultralytics':
+                            library.version = ultralytics_version
+                            break
+                    else:
+                        self.libraries.append(
+                            Library(name='ultralytics', version=ultralytics_version)
+                        )
+                    if 'yolov8' not in [library.name for library in self.libraries]:
+                        self.libraries.append(Library(name='yolov8'))
+
                     self.license = 'AGPL-3.0'
 
                 self.number_of_classes = metadata.get('model.yaml.nc', None)
