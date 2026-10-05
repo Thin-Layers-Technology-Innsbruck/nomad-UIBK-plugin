@@ -297,7 +297,7 @@ async def read_file_and_write_archive(writer_input: WriteArchiveInput):  # noqa:
 
 @activity.defn
 async def process_new_files(data: ProcessNewFilesInput):
-    from nomad.actions.manager import get_upload_files
+    from nomad.uploads import get_upload_files
 
     file_operations = []
     mainfile_names = []
