@@ -333,9 +333,18 @@ class IFMTwoStepAnalysis(ELNAnalysis):
 
         self.trigger_get_status = False
 
-    def find_source_path_from_ref(self, input_ref_subsection, extension):
+    def find_source_path_from_ref(
+        self,
+        input_ref_subsection,
+        extension,
+        default_upload_id=None,
+    ):
         ref = input_ref_subsection.m_to_dict()['reference']
-        upload_id = (re.search(r'uploads/(.*?)/archive', ref)).group(1)
+        upload_id_re = re.search(r'uploads/(.*?)/archive', ref)
+        if upload_id_re is None and default_upload_id is not None:
+            upload_id = default_upload_id
+        else:
+            upload_id = upload_id_re.group(1)
         entry_id = (re.search(r'archive/(.*?)#/data', ref)).group(1)
         for entry in Entry.objects(upload_id=upload_id):  # type: ignore
             if entry.entry_id == entry_id:
@@ -390,7 +399,11 @@ class IFMTwoStepAnalysis(ELNAnalysis):
             ):
                 # remove subsections corresponding to previous runs
                 self.outputs = []
-                binary_source_path = self.find_source_path_from_ref(self.model, '.pt')
+                binary_source_path = self.find_source_path_from_ref(
+                    self.model,
+                    '.pt',
+                    archive.metadata.upload_id,
+                )
                 input_data = InferenceInput(
                     upload_id=archive.metadata.upload_id,
                     user_id=archive.metadata.authors[0].user_id,
@@ -425,7 +438,11 @@ class IFMTwoStepAnalysis(ELNAnalysis):
                         )
                         continue
 
-                    image_source_path = self.find_source_path_from_ref(input, '.bmp')
+                    image_source_path = self.find_source_path_from_ref(
+                        input,
+                        '.bmp',
+                        archive.metadata.upload_id,
+                    )
 
                     input_data.sample_id.append(input.reference.samples[0].lab_id)
                     input_data.image_file_name.append(image_source_path)
