@@ -128,7 +128,7 @@ ifm_analysis_app = App(
     ),
     # dashboard = Dashboard.model_validate({'widgets': yaml.safe_load(widgets_yaml)})
     dashboard=Dashboard(
-        widgets = [
+        widgets=[
             WidgetBoxPlot(
                 autorange=True,
                 subgroup_by=None,
@@ -138,7 +138,7 @@ ifm_analysis_app = App(
                 sample_size=1000,
                 y=AxisQuantity(
                     search_quantity=f'data.defect_prevalence[*].count#{schema}',
-                    unit="count",
+                    unit='count',
                 ),
                 layout={
                     'xxl': Layout(minH=3, minW=3, h=8, w=24, y=0, x=0),
@@ -159,6 +159,6 @@ ifm_analysis_app = App(
                     'sm': Layout(minH=3, minW=3, h=4, w=3, y=0, x=8),
                 },
             ),
-        ] # pyright: ignore[reportArgumentType]
-    )
+        ]  # pyright: ignore[reportArgumentType]
+    ),
 )
